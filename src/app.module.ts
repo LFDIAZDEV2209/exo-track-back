@@ -6,6 +6,7 @@ import { DeclarationsModule } from './declarations/declarations.module';
 import { AssetsModule } from './assets/assets.module';
 import { LiabilitiesModule } from './liabilities/liabilities.module';
 import { IncomesModule } from './incomes/incomes.module';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -33,6 +34,8 @@ import { IncomesModule } from './incomes/incomes.module';
     LiabilitiesModule,
 
     IncomesModule,
+
+    CommonModule,
   ],
 })
 export class AppModule {}

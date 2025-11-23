@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { UserRole } from '../enums/user-role.enum';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
 
@@ -16,12 +16,11 @@ export class User {
     fullName: string;
 
     @Column({ 
-        type: 'varchar', 
-        length: 50, 
+        type: 'int', 
         unique: true, 
         name: 'document_number',
         nullable: false })
-    documentNumber: string;
+    documentNumber: number;
 
     @Column({ 
         type: 'varchar', 
@@ -70,5 +69,12 @@ export class User {
 
     @OneToMany(() => Declaration, (declaration) => declaration.user)
     declarations: Declaration[];
+
+    @BeforeInsert()
+    defaultPassword() {
+        if (!this.password) {
+            this.password = this.fullName.substring(0, 4) + this.documentNumber.toString();
+        }
+    }
 
 }
