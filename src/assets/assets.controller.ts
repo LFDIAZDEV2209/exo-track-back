@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put, ParseUUIDPipe } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
+import { PaginationDto } from 'src/common/dtos/pagination.dto';
 
 @Controller('assets')
 export class AssetsController {
@@ -13,22 +14,22 @@ export class AssetsController {
   }
 
   @Get()
-  findAll() {
-    return this.assetsService.findAll();
+  findAll(@Query() paginationDto: PaginationDto) {
+    return this.assetsService.findAll(paginationDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.assetsService.findOne(+id);
+  @Get(':term')
+  findOne(@Param('term') term: string) {
+    return this.assetsService.findOne(term);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAssetDto: UpdateAssetDto) {
-    return this.assetsService.update(+id, updateAssetDto);
+  @Put(':id')
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateAssetDto: UpdateAssetDto) {
+    return this.assetsService.update(id, updateAssetDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.assetsService.remove(+id);
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.assetsService.remove(id);
   }
 }
