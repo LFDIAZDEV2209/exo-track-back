@@ -3,7 +3,7 @@ import { UserRole } from "src/users/enums/user-role.enum";
 
 interface SeedUser {
     fullName: string;
-    documentNumber: number;
+    documentNumber: string;
     email: string;
     phoneNumber: string;
     password: string;
@@ -46,7 +46,7 @@ export const initialData: {
     users: [
         {
             fullName: 'Juan Pérez García',
-            documentNumber: 12345678,
+            documentNumber: '12345678',
             email: 'juan.perez@example.com',
             phoneNumber: '+57 300 123 4567',
             password: '',
@@ -54,7 +54,7 @@ export const initialData: {
         },
         {
             fullName: 'María López Rodríguez',
-            documentNumber: 87654321,
+            documentNumber: '87654321',
             email: 'maria.lopez@example.com',
             phoneNumber: '+57 300 234 5678',
             password: '',
@@ -62,7 +62,7 @@ export const initialData: {
         },
         {
             fullName: 'Carlos Ramírez Martínez',
-            documentNumber: 11223344,
+            documentNumber: '11223344',
             email: 'carlos.ramirez@example.com',
             phoneNumber: '+57 300 345 6789',
             password: '',
@@ -70,7 +70,7 @@ export const initialData: {
         },
         {
             fullName: 'Ana González Sánchez',
-            documentNumber: 55667788,
+            documentNumber: '55667788',
             email: 'ana.gonzalez@example.com',
             phoneNumber: '+57 300 456 7890',
             password: '',
@@ -78,7 +78,7 @@ export const initialData: {
         },
         {
             fullName: 'Admin Sistema',
-            documentNumber: 99999999,
+            documentNumber: '99999999',
             email: 'admin@exotrack.com',
             phoneNumber: '+57 300 999 9999',
             password: 'Admin123!',

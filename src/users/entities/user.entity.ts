@@ -16,11 +16,11 @@ export class User {
     fullName: string;
 
     @Column({ 
-        type: 'int', 
+        type: 'varchar', 
         unique: true, 
         name: 'document_number',
         nullable: false })
-    documentNumber: number;
+    documentNumber: string;
 
     @Column({ 
         type: 'varchar', 
@@ -73,7 +73,7 @@ export class User {
     @BeforeInsert()
     defaultPassword() {
         if (!this.password) {
-            this.password = this.fullName.substring(0, 4) + this.documentNumber.toString();
+            this.password = this.fullName.substring(0, 4) + this.documentNumber;
         }
     }
 

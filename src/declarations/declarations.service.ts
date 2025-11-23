@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { Not, IsNull } from 'typeorm';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class DeclarationsService {
@@ -19,7 +20,11 @@ export class DeclarationsService {
 
   async create(createDeclarationDto: CreateDeclarationDto) {
     try {
-      const declaration = await this.declarationRepository.save(createDeclarationDto);
+      const declaration = this.declarationRepository.create({
+        ...createDeclarationDto,
+        user: { id: createDeclarationDto.userId } as User
+      });
+      await this.declarationRepository.save(declaration);
       return declaration;
     } catch (error) {
       this.logger.error(error);

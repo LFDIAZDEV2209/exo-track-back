@@ -76,13 +76,13 @@ export class SeedService {
       const userIndex = i % users.length; // Distribuir declaraciones entre usuarios
       const userId = users[userIndex].id;
       
-      // TypeORM acepta la relación directamente con { id: userId }
+      // Ahora puedes usar userId directamente
       const declaration = await this.declarationsService.create({
-        user: { id: userId } as User,
+        userId,  // Más limpio que user: { id: userId }
         taxableYear: declarationData.taxableYear,
         status: declarationData.status,
         description: declarationData.description
-      } as any);
+      });
       
       declarations.push(declaration);
     }

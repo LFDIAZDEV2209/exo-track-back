@@ -51,9 +51,9 @@ export class UsersService {
       if (isUUID(term)) {
         user = await this.userRepository.findOneBy({ id: term });
       }
-      // 2. Buscar por documentNumber (validar si es número)
-      else if (!isNaN(Number(term)) && term.trim() !== '') {
-        user = await this.userRepository.findOneBy({ documentNumber: parseInt(term, 10) });
+      // 2. Buscar por documentNumber
+      else if (term.trim() !== '') {
+        user = await this.userRepository.findOneBy({ documentNumber: term });
       }
       // 3. Buscar por email
       else if (isEmail(term)) {
@@ -116,7 +116,7 @@ export class UsersService {
       if (isUUID(term)) {
         queryBuilder.where('user.id = :term', { term });
       } else if (!isNaN(Number(term)) && term.trim() !== '') {
-        queryBuilder.where('user.documentNumber = :term', { term: parseInt(term, 10) });
+        queryBuilder.where('user.documentNumber = :term', { term });
       } else if (isEmail(term)) {
         queryBuilder.where('user.email = :term', { term });
       } else {
