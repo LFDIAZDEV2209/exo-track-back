@@ -20,7 +20,7 @@ export class Liability {
 
     @Column({
         type: 'decimal',
-        precision: 10,
+        precision: 18,  // Aumentado de 10 a 18
         scale: 2,
         nullable: false
     })

@@ -2,10 +2,11 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { CreateIncomeDto } from './dto/create-income.dto';
 import { UpdateIncomeDto } from './dto/update-income.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { Like, Repository, Not, IsNull } from 'typeorm';
 import { Income } from './entities/income.entity';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isUUID } from 'class-validator';
+import { Declaration } from 'src/declarations/entities/declaration.entity';
 
 @Injectable()
 export class IncomesService {
@@ -19,7 +20,10 @@ export class IncomesService {
 
   async create(createIncomeDto: CreateIncomeDto) {
     try {
-      const income = this.incomeRepository.create(createIncomeDto);
+      const income = this.incomeRepository.create({
+        ...createIncomeDto,
+        declaration: { id: createIncomeDto.declarationId } as Declaration
+      });
       await this.incomeRepository.save(income);
       return income;
     } catch (error) {
@@ -93,7 +97,7 @@ export class IncomesService {
 
   async deleteAll() {
     try {
-      await this.incomeRepository.delete({});
+      await this.incomeRepository.delete({ id: Not(IsNull()) });
       return { message: 'All incomes deleted successfully' };
     } catch (error) {
       this.logger.error(error);

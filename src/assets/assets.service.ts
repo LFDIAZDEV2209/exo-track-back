@@ -2,10 +2,11 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { Like, Repository, Not, IsNull } from 'typeorm';
 import { Asset } from './entities/asset.entity';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isUUID } from 'class-validator';
+import { Declaration } from 'src/declarations/entities/declaration.entity';
 
 @Injectable()
 export class AssetsService {
@@ -19,7 +20,10 @@ export class AssetsService {
 
   async create(createAssetDto: CreateAssetDto) {
     try {
-      const asset = this.assetRepository.create(createAssetDto);
+      const asset = this.assetRepository.create({
+        ...createAssetDto,
+        declaration: { id: createAssetDto.declarationId } as Declaration
+      });
       await this.assetRepository.save(asset);
       return asset;
     } catch (error) {
@@ -93,7 +97,7 @@ export class AssetsService {
 
   async deleteAll() {
     try {
-      await this.assetRepository.delete({});
+      await this.assetRepository.delete({ id: Not(IsNull()) });
       return { message: 'All assets deleted successfully' };
     } catch (error) {
       this.logger.error(error);

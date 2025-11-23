@@ -2,10 +2,11 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { CreateLiabilityDto } from './dto/create-liability.dto';
 import { UpdateLiabilityDto } from './dto/update-liability.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { Like, Repository, Not, IsNull } from 'typeorm';
 import { Liability } from './entities/liability.entity';
 import { isUUID } from 'class-validator';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { Declaration } from 'src/declarations/entities/declaration.entity';
 
 @Injectable()
 export class LiabilitiesService {
@@ -19,7 +20,10 @@ export class LiabilitiesService {
 
   async create(createLiabilityDto: CreateLiabilityDto) {
     try {
-      const liability = this.liabilityRepository.create(createLiabilityDto);
+      const liability = this.liabilityRepository.create({
+        ...createLiabilityDto,
+        declaration: { id: createLiabilityDto.declarationId } as Declaration
+      });
       await this.liabilityRepository.save(liability);
       return liability;
     } catch (error) {
@@ -94,7 +98,7 @@ export class LiabilitiesService {
 
   async deleteAll() {
     try {
-      await this.liabilityRepository.delete({});
+      await this.liabilityRepository.delete({ id: Not(IsNull()) });
       return { message: 'All liabilities deleted successfully' };
     } catch (error) {
       this.logger.error(error);

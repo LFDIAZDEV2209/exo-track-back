@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isEmail, isNumber, isUUID } from 'class-validator';
 import { Like } from 'typeorm';
+import { Not, IsNull } from 'typeorm';
 
 @Injectable()
 export class UsersService {
@@ -141,7 +142,7 @@ export class UsersService {
 
   async deleteAll() {
     try {
-      await this.userRepository.delete({});
+      await this.userRepository.delete({ id: Not(IsNull()) });
       return { message: 'All users deleted successfully' };
     } catch (error) {
       this.logger.error(error);

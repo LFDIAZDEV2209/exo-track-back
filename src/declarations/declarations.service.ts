@@ -5,6 +5,7 @@ import { Declaration } from './entities/declaration.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { Not, IsNull } from 'typeorm';
 
 @Injectable()
 export class DeclarationsService {
@@ -100,7 +101,7 @@ export class DeclarationsService {
 
   async deleteAll() {
     try {
-      await this.declarationRepository.delete({});
+      await this.declarationRepository.delete({ id: Not(IsNull()) });
       return { message: 'All declarations deleted successfully' };
     } catch (error) {
       this.logger.error(error);
