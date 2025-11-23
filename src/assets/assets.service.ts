@@ -90,4 +90,14 @@ export class AssetsService {
       throw new BadRequestException(error);
     }
   }
+
+  async deleteAll() {
+    try {
+      await this.assetRepository.delete({});
+      return { message: 'All assets deleted successfully' };
+    } catch (error) {
+      this.logger.error(error);
+      throw new BadRequestException(error);
+    }
+  }
 }

@@ -138,4 +138,14 @@ export class UsersService {
       throw new BadRequestException(error);
     }
   }
+
+  async deleteAll() {
+    try {
+      await this.userRepository.delete({});
+      return { message: 'All users deleted successfully' };
+    } catch (error) {
+      this.logger.error(error);
+      throw new BadRequestException(error);
+    }
+  }
 }

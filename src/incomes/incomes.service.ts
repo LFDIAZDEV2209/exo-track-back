@@ -90,4 +90,14 @@ export class IncomesService {
       throw new BadRequestException(error.message);
     }
   }
+
+  async deleteAll() {
+    try {
+      await this.incomeRepository.delete({});
+      return { message: 'All incomes deleted successfully' };
+    } catch (error) {
+      this.logger.error(error);
+      throw new BadRequestException(error);
+    }
+  }
 }

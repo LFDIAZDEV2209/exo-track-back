@@ -8,5 +8,6 @@ import { Liability } from './entities/liability.entity';
   controllers: [LiabilitiesController],
   providers: [LiabilitiesService],
   imports: [TypeOrmModule.forFeature([Liability])],
+  exports: [LiabilitiesService, TypeOrmModule],
 })
 export class LiabilitiesModule {}

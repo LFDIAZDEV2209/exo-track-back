@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe, Put } from '@nestjs/common';
 import { DeclarationsService } from './declarations.service';
 import { CreateDeclarationDto } from './dto/create-declaration.dto';
 import { UpdateDeclarationDto } from './dto/update-declaration.dto';
+import { PaginationDto } from 'src/common/dtos/pagination.dto';
 
 @Controller('declarations')
 export class DeclarationsController {
@@ -13,22 +14,22 @@ export class DeclarationsController {
   }
 
   @Get()
-  findAll() {
-    return this.declarationsService.findAll();
+  findAll(@Query() paginationDto: PaginationDto, @Query('userId') userId?: string) {
+    return this.declarationsService.findAll(paginationDto, userId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.declarationsService.findOne(+id);
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.declarationsService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDeclarationDto: UpdateDeclarationDto) {
-    return this.declarationsService.update(+id, updateDeclarationDto);
+  @Put(':id')
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateDeclarationDto: UpdateDeclarationDto) {
+    return this.declarationsService.update(id, updateDeclarationDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.declarationsService.remove(+id);
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.declarationsService.remove(id);
   }
 }

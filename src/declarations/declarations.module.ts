@@ -8,5 +8,6 @@ import { Declaration } from './entities/declaration.entity';
   controllers: [DeclarationsController],
   providers: [DeclarationsService],
   imports: [TypeOrmModule.forFeature([Declaration])],
+  exports: [DeclarationsService, TypeOrmModule],
 })
 export class DeclarationsModule {}

@@ -91,4 +91,14 @@ export class LiabilitiesService {
       throw new BadRequestException(error.message);
     }
   }
+
+  async deleteAll() {
+    try {
+      await this.liabilityRepository.delete({});
+      return { message: 'All liabilities deleted successfully' };
+    } catch (error) {
+      this.logger.error(error);
+      throw new BadRequestException(error);
+    }
+  }
 }
