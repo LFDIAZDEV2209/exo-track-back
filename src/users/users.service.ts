@@ -24,6 +24,8 @@ export class UsersService {
     try {
       const user = this.userRepository.create(createUserDto);
       await this.userRepository.save(user);
+      // Eliminar el password del usuario antes de retornarlo
+      delete (user as any).password;
       return user;
     } catch (error) {
       this.logger.error(error);
@@ -148,5 +150,12 @@ export class UsersService {
       this.logger.error(error);
       throw new BadRequestException(error);
     }
+  }
+
+  async findByDocumentNumber(documentNumber: string) {
+    return this.userRepository.findOne({
+      where: { documentNumber },
+      select: { documentNumber: true, password: true }
+    });
   }
 }

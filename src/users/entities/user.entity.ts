@@ -1,6 +1,7 @@
 import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { UserRole } from '../enums/user-role.enum';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
+import * as bcrypt from 'bcrypt';
 
 @Entity({ name: 'users' })
 export class User {
@@ -41,7 +42,9 @@ export class User {
         type: 'varchar', 
         length: 150, 
         unique: true,
-        nullable: false })
+        nullable: false,
+        select: false 
+    })
     password: string;
 
     @Column({ 
@@ -73,7 +76,8 @@ export class User {
     @BeforeInsert()
     defaultPassword() {
         if (!this.password) {
-            this.password = this.fullName.substring(0, 4) + this.documentNumber;
+            this.password = this.fullName.substring(0, 2) + this.documentNumber;
+            this.password = bcrypt.hashSync(this.password, 10);
         }
     }
 

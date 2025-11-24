@@ -8,7 +8,6 @@ export class CreateUserDto {
 
     @IsString()
     @IsNotEmpty()
-    @IsPositive()
     documentNumber: string;
 
     @IsEmail()
@@ -21,5 +20,5 @@ export class CreateUserDto {
 
     @IsString()
     @IsOptional()
-    password: string;
+    password?: string;
 }
