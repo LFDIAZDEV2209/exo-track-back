@@ -13,6 +13,12 @@ async function bootstrap() {
     forbidNonWhitelisted: true
   }));
 
+  app.enableCors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   const config = new DocumentBuilder()
     .setTitle('Exo Track API')
     .setDescription('Exo Track API is an app to track your exogenous from DIAN and get data easier.')
