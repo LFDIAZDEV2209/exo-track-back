@@ -5,7 +5,9 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { UserRole } from '../shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Users')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

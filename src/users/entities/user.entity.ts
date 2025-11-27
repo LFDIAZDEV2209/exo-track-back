@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { UserRole } from '../../shared/enums/user-role.enum';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
@@ -6,9 +7,17 @@ import * as bcrypt from 'bcrypt';
 @Entity({ name: 'users' })
 export class User {
 
+    @ApiProperty({
+        description: 'The ID of the user',
+        example: '123e4567-e89b-12d3-a456-426614174000'
+    })
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
+    @ApiProperty({
+        description: 'The full name of the user',
+        example: 'John Doe'
+    })
     @Column({ 
         type: 'varchar', 
         length: 150, 
@@ -16,6 +25,10 @@ export class User {
         nullable: false })
     fullName: string;
 
+    @ApiProperty({
+        description: 'The document number of the user',
+        example: '1234567890'
+    })
     @Column({ 
         type: 'varchar', 
         unique: true, 
@@ -23,6 +36,10 @@ export class User {
         nullable: false })
     documentNumber: string;
 
+    @ApiProperty({
+        description: 'The email of the user',
+        example: 'john.doe@example.com'
+    })
     @Column({ 
         type: 'varchar', 
         length: 150, 
@@ -38,6 +55,10 @@ export class User {
         nullable: true })
     phoneNumber: string;
 
+    @ApiProperty({
+        description: 'The password of the user',
+        example: 'password'
+    })
     @Column({ 
         type: 'varchar', 
         length: 150, 
@@ -47,6 +68,10 @@ export class User {
     })
     password: string;
 
+    @ApiProperty({
+        description: 'The role of the user',
+        example: UserRole.ADMIN
+    })
     @Column({ 
         type: 'enum', 
         enum: UserRole,

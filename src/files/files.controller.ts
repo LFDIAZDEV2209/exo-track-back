@@ -4,7 +4,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { FileFilter } from './helpers/fileFilter.helper';
 import { UserRole } from 'src/shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Files')
 @Controller('files')
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}

@@ -1,20 +1,32 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Asset } from 'src/assets/entities/asset.entity';
 import { Income } from 'src/incomes/entities/income.entity';
 import { Liability } from 'src/liabilities/entities/liability.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { DeclarationStatus } from '../enums/declaration-status.enum';
-
 @Entity({ name: 'declarations' })
 export class Declaration {
 
+    @ApiProperty({
+        description: 'The ID of the declaration',
+        example: '123e4567-e89b-12d3-a456-426614174000'
+    })
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
+    @ApiProperty({
+        description: 'The user of the declaration',
+        example: '123e4567-e89b-12d3-a456-426614174000'
+    })
     @ManyToOne(() => User, (user) => user.declarations)
     @JoinColumn({ name: 'user_id' })
     user: User;
 
+    @ApiProperty({
+        description: 'The taxable year of the declaration',
+        example: 2023
+    })
     @Column({
         type: 'int',
         name: 'taxable_year',
@@ -22,6 +34,10 @@ export class Declaration {
     })
     taxableYear: number;
 
+    @ApiProperty({
+        description: 'The status of the declaration',
+        example: DeclarationStatus.PENDING
+    })
     @Column({
         type: 'enum',
         enum: DeclarationStatus,
@@ -29,6 +45,10 @@ export class Declaration {
     })
     status: DeclarationStatus;
 
+    @ApiProperty({
+        description: 'The description of the declaration',
+        example: 'Declaración de renta 2023'
+    })
     @Column({
         type: 'text',
         nullable: true

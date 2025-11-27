@@ -5,7 +5,9 @@ import { UpdateIncomeDto } from './dto/update-income.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { UserRole } from 'src/shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Incomes')
 @Controller('incomes')
 export class IncomesController {
   constructor(private readonly incomesService: IncomesService) {}

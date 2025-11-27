@@ -3,7 +3,9 @@ import { AssetsService } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Assets')
 @Controller('assets')
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}

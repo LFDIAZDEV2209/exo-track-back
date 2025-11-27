@@ -6,7 +6,9 @@ import { UserRole } from 'src/shared/enums/user-role.enum';
 import { Auth } from './decorators/auth.decorator';
 import { User } from 'src/users/entities/user.entity';
 import { GetUser } from './decorators/get-user.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

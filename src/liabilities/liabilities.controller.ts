@@ -5,7 +5,9 @@ import { UpdateLiabilityDto } from './dto/update-liability.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { UserRole } from 'src/shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Liabilities')
 @Controller('liabilities')
 export class LiabilitiesController {
   constructor(private readonly liabilitiesService: LiabilitiesService) {}

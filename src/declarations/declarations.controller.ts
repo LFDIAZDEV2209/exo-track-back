@@ -5,7 +5,9 @@ import { UpdateDeclarationDto } from './dto/update-declaration.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { UserRole } from 'src/shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Declarations')
 @Controller('declarations')
 export class DeclarationsController {
   constructor(private readonly declarationsService: DeclarationsService) {}

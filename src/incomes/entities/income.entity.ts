@@ -1,3 +1,4 @@
+import { ApiProperty } from "@nestjs/swagger";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Source } from "src/shared/enums/source.enum";
 import { Declaration } from "src/declarations/entities/declaration.entity";
@@ -5,19 +6,35 @@ import { Declaration } from "src/declarations/entities/declaration.entity";
 @Entity({name: 'incomes'})
 export class Income {
 
+    @ApiProperty({
+        description: 'The ID of the income',
+        example: '123e4567-e89b-12d3-a456-426614174000'
+    })
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
+    @ApiProperty({
+        description: 'The declaration of the income',
+        example: '123e4567-e89b-12d3-a456-426614174000'
+    })
     @ManyToOne(() => Declaration, (declaration) => declaration.incomes)
     @JoinColumn({ name: 'declaration_id' })
     declaration: Declaration;
 
+    @ApiProperty({
+        description: 'The concept of the income',
+        example: 'Salario'
+    })
     @Column({
         type: 'text',
         nullable: false
     })
     concept: string;
 
+    @ApiProperty({
+        description: 'The amount of the income',
+        example: 1000000
+    })
     @Column({
         type: 'decimal',
         precision: 18,  // Aumentado de 10 a 18
@@ -26,6 +43,10 @@ export class Income {
     })
     amount: number;
 
+    @ApiProperty({
+        description: 'The source of the income',
+        example: Source.MANUAL
+    })
     @Column({
         type: 'enum',
         enum: Source,
