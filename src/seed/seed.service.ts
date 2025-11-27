@@ -7,6 +7,7 @@ import { Declaration } from 'src/declarations/entities/declaration.entity';
 import { initialData } from './data/seed-data';
 import { User } from 'src/users/entities/user.entity';
 import { DeclarationsService } from 'src/declarations/declarations.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class SeedService {
@@ -25,7 +26,7 @@ export class SeedService {
     this.logger.log('Starting seed execution');
     
     try {
-      // 1. Limpiar base de datos (opcional - descomentar si quieres limpiar antes de insertar)
+      // 1. Limpiar base de datos
       await this.cleanDatabase();
 
       // 2. Insertar usuarios
@@ -59,8 +60,23 @@ export class SeedService {
     const users: User[] = [];
     
     for (const userData of initialData.users) {
-      const user = await this.usersService.create(userData);
+      // ✅ Hashear el password si tiene un valor, si no, dejarlo vacío para que @BeforeInsert() lo genere
+      const userToCreate = {
+        ...userData,
+        password: userData.password 
+          ? bcrypt.hashSync(userData.password, 10) // Hashear si tiene valor
+          : undefined // Dejar undefined si está vacío para que @BeforeInsert() lo genere
+      };
+      
+      const user = await this.usersService.create(userToCreate);
       users.push(user);
+      
+      // 🔍 Log para debug: mostrar qué password se usó
+      if (userData.password) {
+        this.logger.debug(`User ${userData.fullName} created with custom password`);
+      } else {
+        this.logger.debug(`User ${userData.fullName} created with auto-generated password`);
+      }
     }
     
     return users;
@@ -76,9 +92,8 @@ export class SeedService {
       const userIndex = i % users.length; // Distribuir declaraciones entre usuarios
       const userId = users[userIndex].id;
       
-      // Ahora puedes usar userId directamente
       const declaration = await this.declarationsService.create({
-        userId,  // Más limpio que user: { id: userId }
+        userId,
         taxableYear: declarationData.taxableYear,
         status: declarationData.status,
         description: declarationData.description
@@ -132,7 +147,7 @@ export class SeedService {
     }
   }
 
-  // Método opcional para limpiar la base de datos antes de insertar
+  // Método para limpiar la base de datos antes de insertar
   // IMPORTANTE: El orden es crucial debido a las foreign keys
   private async cleanDatabase(): Promise<void> {
     this.logger.log('Cleaning database...');
