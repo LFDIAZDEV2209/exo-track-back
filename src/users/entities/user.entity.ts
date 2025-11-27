@@ -1,5 +1,5 @@
 import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { UserRole } from '../enums/user-role.enum';
+import { UserRole } from '../../shared/enums/user-role.enum';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
 import * as bcrypt from 'bcrypt';
 

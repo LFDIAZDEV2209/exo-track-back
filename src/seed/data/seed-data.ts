@@ -1,5 +1,5 @@
 import { DeclarationStatus } from "src/declarations/enums/declaration-status.enum";
-import { UserRole } from "src/users/enums/user-role.enum";
+import { UserRole } from "src/shared/enums/user-role.enum";
 
 interface SeedUser {
     fullName: string;

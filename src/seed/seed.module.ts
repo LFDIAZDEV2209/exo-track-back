@@ -6,6 +6,7 @@ import { DeclarationsModule } from 'src/declarations/declarations.module';
 import { AssetsModule } from 'src/assets/assets.module';
 import { LiabilitiesModule } from 'src/liabilities/liabilities.module';
 import { IncomesModule } from 'src/incomes/incomes.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   controllers: [SeedController],
@@ -15,7 +16,8 @@ import { IncomesModule } from 'src/incomes/incomes.module';
     DeclarationsModule,
     AssetsModule,
     LiabilitiesModule,
-    IncomesModule
+    IncomesModule,
+    AuthModule
  ]
 })
 export class SeedModule {}
