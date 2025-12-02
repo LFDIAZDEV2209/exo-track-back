@@ -150,11 +150,27 @@ export class UsersService {
   async remove(id: string) {
     try {
       const user = await this.findOne(id);
+      
+      // Con onDelete: 'CASCADE' configurado, solo necesitas eliminar el usuario
+      // La base de datos se encargará automáticamente de eliminar:
+      // - Declarations (porque Declaration tiene onDelete: 'CASCADE' hacia User)
+      // - Assets, Liabilities, Incomes (porque tienen onDelete: 'CASCADE' hacia Declaration)
       await this.userRepository.delete(user.id);
-      return { message: 'User deleted successfully' };
+      
+      return { 
+        message: 'User deleted successfully'
+      };
     } catch (error) {
       this.logger.error(error);
-      throw new BadRequestException(error);
+      
+      // Error más descriptivo
+      if (error.code === '23503' || error.driverError?.code === '23503') {
+        throw new BadRequestException(
+          'Cannot delete user: User has associated data that cannot be deleted.'
+        );
+      }
+      
+      throw new BadRequestException(error.message || 'Error deleting user');
     }
   }
 

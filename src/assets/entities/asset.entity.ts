@@ -17,7 +17,7 @@ export class Asset {
         description: 'The declaration of the asset',
         example: '123e4567-e89b-12d3-a456-426614174000'
     })
-    @ManyToOne(() => Declaration, (declaration) => declaration.assets)
+    @ManyToOne(() => Declaration, (declaration) => declaration.assets, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'declaration_id' })
     declaration: Declaration;
 

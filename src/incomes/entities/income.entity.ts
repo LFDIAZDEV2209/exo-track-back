@@ -17,7 +17,7 @@ export class Income {
         description: 'The declaration of the income',
         example: '123e4567-e89b-12d3-a456-426614174000'
     })
-    @ManyToOne(() => Declaration, (declaration) => declaration.incomes)
+    @ManyToOne(() => Declaration, (declaration) => declaration.incomes, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'declaration_id' })
     declaration: Declaration;
 

@@ -19,7 +19,7 @@ export class Declaration {
         description: 'The user of the declaration',
         example: '123e4567-e89b-12d3-a456-426614174000'
     })
-    @ManyToOne(() => User, (user) => user.declarations)
+    @ManyToOne(() => User, (user) => user.declarations, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'user_id' })
     user: User;
 
