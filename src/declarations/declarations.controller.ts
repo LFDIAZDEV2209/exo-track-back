@@ -6,6 +6,7 @@ import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { UserRole } from 'src/shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { ApiTags } from '@nestjs/swagger';
+import { FindAllDeclarationsDto } from './dto/find-all-declarations.dto';
 
 @ApiTags('Declarations')
 @Controller('declarations')
@@ -20,10 +21,25 @@ export class DeclarationsController {
 
   @Get()
   @Auth()
-  findAll(@Query() paginationDto: PaginationDto, @Query('userId') userId?: string) {
-    return this.declarationsService.findAll(paginationDto, userId);
+  findAll(@Query() findAllDto: FindAllDeclarationsDto) {
+    return this.declarationsService.findAll(findAllDto);
   }
 
+  // ✅ Rutas específicas ANTES de la ruta dinámica :id
+  @Get('stats')
+  @Auth(UserRole.ADMIN)
+  getStats() {
+    return this.declarationsService.getStats();
+  }
+
+  @Get('recent-activity')
+  @Auth(UserRole.ADMIN)
+  getRecentActivity(@Query('limit') limit?: number) {
+    const limitValue = limit ? parseInt(limit.toString()) : 5;
+    return this.declarationsService.getRecentActivity(limitValue);
+  }
+
+  // ✅ Ruta dinámica :id al final
   @Get(':id')
   @Auth()
   findOne(@Param('id', ParseUUIDPipe) id: string) {

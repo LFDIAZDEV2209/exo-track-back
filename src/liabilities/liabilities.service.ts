@@ -32,14 +32,28 @@ export class LiabilitiesService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto) {
+  async findAll(paginationDto: PaginationDto, declarationId?: string) {
     try {
       const { limit = 10, offset = 0 } = paginationDto;
-      const liabilities = await this.liabilityRepository.find({
+      
+      const whereCondition: any = {};
+      if (declarationId) {
+        whereCondition.declaration = { id: declarationId };
+      }
+      
+      const [declarations, total] = await this.liabilityRepository.findAndCount({
+        where: whereCondition,
         take: limit,
-        skip: offset
+        skip: offset,
+        relations: ['user'] // Opcional: incluir la relación del usuario
       });
-      return liabilities;
+      
+      return {
+        data: declarations,
+        total,
+        limit,
+        offset
+      };
     } catch (error) {
       this.logger.error(error);
       throw new BadRequestException(error);

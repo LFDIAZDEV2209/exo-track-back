@@ -23,6 +23,12 @@ export class UsersController {
     return this.usersService.findAll(paginationDto);
   }
 
+  @Get('stats')
+  @Auth(UserRole.ADMIN)
+  getStats() {
+    return this.usersService.getStats();
+  }
+
   @Get(':term')
   @Auth(UserRole.ADMIN)
   findOne(@Param('term') term: string) {
@@ -40,4 +46,5 @@ export class UsersController {
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.remove(id);
   }
+
 }

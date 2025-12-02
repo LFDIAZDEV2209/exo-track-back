@@ -20,8 +20,8 @@ export class LiabilitiesController {
 
   @Get()
   @Auth()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.liabilitiesService.findAll(paginationDto);
+  findAll(@Query() paginationDto: PaginationDto, @Query('declarationId') declarationId?: string) {
+    return this.liabilitiesService.findAll(paginationDto, declarationId);
   }
 
   @Get(':term')

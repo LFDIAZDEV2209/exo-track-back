@@ -8,6 +8,7 @@ import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isEmail, isNumber, isUUID } from 'class-validator';
 import { Like } from 'typeorm';
 import { Not, IsNull } from 'typeorm';
+import { UserRole } from 'src/shared/enums/user-role.enum'
 
 @Injectable()
 export class UsersService {
@@ -34,15 +35,63 @@ export class UsersService {
   }
 
   async findAll(paginationDto: PaginationDto) {
-    
-    const { limit = 10, offset = 0 } = paginationDto;
-    
-    const users = await this.userRepository.find({
-      take: limit,
-      skip: offset
-      // TODO: Relations
-    });
-    return users;
+    try {
+      const { limit = 10, offset = 0 } = paginationDto;
+      
+      // ✅ Obtener usuarios con role USER y contar sus declaraciones
+      const queryBuilder = this.userRepository
+        .createQueryBuilder('user')
+        .leftJoin('user.declarations', 'declaration')
+        .select([
+          'user.id',
+          'user.documentNumber',  // ✅ Usar el nombre de la propiedad (TypeORM lo mapea)
+          'user.fullName',
+          'user.email',
+          'user.phoneNumber',
+          'user.createdAt'
+        ])
+        .addSelect('COUNT(declaration.id)', 'totalDeclarations')
+        .where('user.role = :role', { role: UserRole.USER })
+        .groupBy('user.id')
+        .addGroupBy('user.documentNumber')
+        .addGroupBy('user.fullName')
+        .addGroupBy('user.email')
+        .addGroupBy('user.phoneNumber')
+        .addGroupBy('user.createdAt');
+      
+      // ✅ Obtener total correcto (contar usuarios únicos, no grupos)
+      const totalQuery = this.userRepository
+        .createQueryBuilder('user')
+        .where('user.role = :role', { role: UserRole.USER });
+      const total = await totalQuery.getCount();
+      
+      // Aplicar paginación
+      const users = await queryBuilder
+        .take(limit)
+        .skip(offset)
+        .getRawMany();
+      
+      // ✅ Formatear la respuesta - getRawMany() devuelve: user_id, user_document_number, user_full_name, etc.
+      const formattedUsers = users.map((user) => ({
+        id: user.user_id,
+        documentNumber: user.user_document_number,  // ✅ snake_case de la BD
+        fullName: user.user_full_name,
+        email: user.user_email,
+        phoneNumber: user.user_phone_number,
+        totalDeclarations: parseInt(user.totalDeclarations) || 0,
+        createdAt: user.user_created_at || new Date()
+      }));
+      
+      return {
+        data: formattedUsers,
+        total,
+        limit,
+        offset
+      };
+    } catch (error) {
+      this.logger.error(error);
+      throw new BadRequestException(error);
+    }
   }
 
   async findOne(term: string) {
@@ -155,7 +204,52 @@ export class UsersService {
   async findByDocumentNumber(documentNumber: string) {
     return this.userRepository.findOne({
       where: { documentNumber },
-      select: { id: true, documentNumber: true, password: true }
+      select: { id: true, fullName: true, documentNumber: true, password: true }
     });
+  }
+
+  async getStats() {
+    try {
+      // Total de users con role USER
+      const totalUsers = await this.userRepository.count({
+        where: { role: UserRole.USER }
+      });
+      
+      // Total de users activos con role USER
+      const totalActiveUsers = await this.userRepository.count({
+        where: { 
+          role: UserRole.USER,
+          isActive: true 
+        }
+      });
+      
+      // Promedio de declaraciones por cliente
+      const usersWithDeclarations = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoin('user.declarations', 'declaration')
+        .where('user.role = :role', { role: UserRole.USER })
+        .select('user.id', 'userId')
+        .addSelect('COUNT(declaration.id)', 'declarationCount')
+        .groupBy('user.id')
+        .getRawMany();
+      
+      const totalDeclarations = usersWithDeclarations.reduce(
+        (sum, user) => sum + parseInt(user.declarationCount || '0'), 
+        0
+      );
+      
+      const averageDeclarationsPerUser = totalUsers > 0 
+        ? totalDeclarations / totalUsers 
+        : 0;
+      
+      return {
+        totalUsers,
+        totalActiveUsers,
+        averageDeclarationsPerUser: Math.round(averageDeclarationsPerUser * 100) / 100 // Redondear a 2 decimales
+      };
+    } catch (error) {
+      this.logger.error(error);
+      throw new BadRequestException(error);
+    }
   }
 }
