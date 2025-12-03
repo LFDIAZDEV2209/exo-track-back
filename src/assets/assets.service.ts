@@ -84,16 +84,25 @@ export class AssetsService {
 
   async update(id: string, updateAssetDto: UpdateAssetDto) {
     try {
-      const asset = await this.assetRepository.preload({
-        id,
-        ...updateAssetDto
-      });
-      if (!asset) {
-        throw new NotFoundException('Asset not found');
+      const asset = await this.findOne(id);
+      
+      // Solo actualizar concept y amount (no se permite cambiar declarationId)
+      if (updateAssetDto.concept !== undefined) {
+        asset.concept = updateAssetDto.concept;
       }
+      if (updateAssetDto.amount !== undefined) {
+        asset.amount = updateAssetDto.amount;
+      }
+      
+      // Guardar los cambios en la base de datos
+      await this.assetRepository.save(asset);
+      
       return asset;
     } catch (error) {
       this.logger.error(error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new BadRequestException(error);
     }
   }

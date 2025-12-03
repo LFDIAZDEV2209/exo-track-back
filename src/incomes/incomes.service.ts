@@ -84,16 +84,25 @@ export class IncomesService {
 
   async update(id: string, updateIncomeDto: UpdateIncomeDto) {
     try {
-      const income = await this.incomeRepository.preload({
-        id,
-        ...updateIncomeDto
-      });
-      if (!income) {
-        throw new NotFoundException('Income not found');
+      const income = await this.findOne(id);
+      
+      // Solo actualizar concept y amount (no se permite cambiar declarationId)
+      if (updateIncomeDto.concept !== undefined) {
+        income.concept = updateIncomeDto.concept;
       }
+      if (updateIncomeDto.amount !== undefined) {
+        income.amount = updateIncomeDto.amount;
+      }
+      
+      // Guardar los cambios en la base de datos
+      await this.incomeRepository.save(income);
+      
       return income;
     } catch (error) {
       this.logger.error(error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new BadRequestException(error);
     }
   }

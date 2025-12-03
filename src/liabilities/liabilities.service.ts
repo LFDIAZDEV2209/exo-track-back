@@ -83,17 +83,25 @@ export class LiabilitiesService {
 
   async update(id: string, updateLiabilityDto: UpdateLiabilityDto) {
     try {
-      const liability = await this.liabilityRepository.preload({
-        id,
-        ...updateLiabilityDto
-      });
-      if (!liability) {
-        throw new NotFoundException('Liability not found');
+      const liability = await this.findOne(id);
+      
+      // Solo actualizar concept y amount (no se permite cambiar declarationId)
+      if (updateLiabilityDto.concept !== undefined) {
+        liability.concept = updateLiabilityDto.concept;
       }
+      if (updateLiabilityDto.amount !== undefined) {
+        liability.amount = updateLiabilityDto.amount;
+      }
+      
+      // Guardar los cambios en la base de datos
       await this.liabilityRepository.save(liability);
+      
       return liability;
     } catch (error) {
       this.logger.error(error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new BadRequestException(error);
     }
   }

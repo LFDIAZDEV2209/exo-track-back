@@ -36,7 +36,9 @@ export class UsersService {
 
   async findAll(paginationDto: PaginationDto) {
     try {
-      const { limit = 10, offset = 0 } = paginationDto;
+      // ✅ Asegurar que limit y offset sean números
+      const limit = paginationDto.limit ? Number(paginationDto.limit) : 10;
+      const offset = paginationDto.offset ? Number(paginationDto.offset) : 0;
       
       // ✅ Obtener usuarios con role USER y contar sus declaraciones
       const queryBuilder = this.userRepository
@@ -44,7 +46,7 @@ export class UsersService {
         .leftJoin('user.declarations', 'declaration')
         .select([
           'user.id',
-          'user.documentNumber',  // ✅ Usar el nombre de la propiedad (TypeORM lo mapea)
+          'user.documentNumber',
           'user.fullName',
           'user.email',
           'user.phoneNumber',
@@ -57,7 +59,9 @@ export class UsersService {
         .addGroupBy('user.fullName')
         .addGroupBy('user.email')
         .addGroupBy('user.phoneNumber')
-        .addGroupBy('user.createdAt');
+        .addGroupBy('user.createdAt')
+        .limit(limit)  // ✅ Usar limit() en lugar de take()
+        .offset(offset);  // ✅ Usar offset() en lugar de skip()
       
       // ✅ Obtener total correcto (contar usuarios únicos, no grupos)
       const totalQuery = this.userRepository
@@ -65,16 +69,13 @@ export class UsersService {
         .where('user.role = :role', { role: UserRole.USER });
       const total = await totalQuery.getCount();
       
-      // Aplicar paginación
-      const users = await queryBuilder
-        .take(limit)
-        .skip(offset)
-        .getRawMany();
+      // ✅ Ejecutar query con paginación
+      const users = await queryBuilder.getRawMany();
       
-      // ✅ Formatear la respuesta - getRawMany() devuelve: user_id, user_document_number, user_full_name, etc.
+      // ✅ Formatear la respuesta
       const formattedUsers = users.map((user) => ({
         id: user.user_id,
-        documentNumber: user.user_document_number,  // ✅ snake_case de la BD
+        documentNumber: user.user_document_number,
         fullName: user.user_full_name,
         email: user.user_email,
         phoneNumber: user.user_phone_number,
