@@ -7,6 +7,7 @@ import { Income } from './entities/income.entity';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isUUID } from 'class-validator';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
+import { FindAllByDeclarationDto } from 'src/shared/dtos/find-all-by-declaration.dto';
 
 @Injectable()
 export class IncomesService {
@@ -32,14 +33,27 @@ export class IncomesService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto) {
+  async findAll(findAllDto: FindAllByDeclarationDto, declarationId?: string) {
     try {
-      const { limit = 10, offset = 0 } = paginationDto;
-      const incomes = await this.incomeRepository.find({
+      const { limit = 10, offset = 0 } = findAllDto;
+      
+      const whereCondition: any = {};
+      if (declarationId || findAllDto.declarationId) {
+        whereCondition.declaration = { id: declarationId || findAllDto.declarationId };
+      }
+      
+      const [incomes, total] = await this.incomeRepository.findAndCount({
+        where: whereCondition,
         take: limit,
         skip: offset
       });
-      return incomes;
+      
+      return {
+        data: incomes,
+        total,
+        limit,
+        offset
+      };
     } catch (error) {
       this.logger.error(error);
       throw new BadRequestException(error);

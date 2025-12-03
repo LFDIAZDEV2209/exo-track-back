@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put, ParseUUI
 import { LiabilitiesService } from './liabilities.service';
 import { CreateLiabilityDto } from './dto/create-liability.dto';
 import { UpdateLiabilityDto } from './dto/update-liability.dto';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { FindAllByDeclarationDto } from 'src/shared/dtos/find-all-by-declaration.dto';
 import { UserRole } from 'src/shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { ApiTags } from '@nestjs/swagger';
@@ -20,8 +20,8 @@ export class LiabilitiesController {
 
   @Get()
   @Auth()
-  findAll(@Query() paginationDto: PaginationDto, @Query('declarationId') declarationId?: string) {
-    return this.liabilitiesService.findAll(paginationDto, declarationId);
+  findAll(@Query() findAllDto: FindAllByDeclarationDto) {
+    return this.liabilitiesService.findAll(findAllDto, findAllDto.declarationId);
   }
 
   @Get(':term')

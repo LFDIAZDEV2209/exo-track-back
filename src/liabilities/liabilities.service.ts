@@ -5,8 +5,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository, Not, IsNull } from 'typeorm';
 import { Liability } from './entities/liability.entity';
 import { isUUID } from 'class-validator';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
+import { FindAllByDeclarationDto } from 'src/shared/dtos/find-all-by-declaration.dto';
 
 @Injectable()
 export class LiabilitiesService {
@@ -32,24 +32,23 @@ export class LiabilitiesService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto, declarationId?: string) {
+  async findAll(findAllDto: FindAllByDeclarationDto, declarationId?: string) {
     try {
-      const { limit = 10, offset = 0 } = paginationDto;
+      const { limit = 10, offset = 0 } = findAllDto;
       
       const whereCondition: any = {};
-      if (declarationId) {
-        whereCondition.declaration = { id: declarationId };
+      if (declarationId || findAllDto.declarationId) {
+        whereCondition.declaration = { id: declarationId || findAllDto.declarationId };
       }
       
-      const [declarations, total] = await this.liabilityRepository.findAndCount({
+      const [liabilities, total] = await this.liabilityRepository.findAndCount({
         where: whereCondition,
         take: limit,
-        skip: offset,
-        relations: ['user'] // Opcional: incluir la relación del usuario
+        skip: offset
       });
       
       return {
-        data: declarations,
+        data: liabilities,
         total,
         limit,
         offset

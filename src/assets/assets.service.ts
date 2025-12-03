@@ -7,6 +7,7 @@ import { Asset } from './entities/asset.entity';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isUUID } from 'class-validator';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
+import { FindAllByDeclarationDto } from 'src/shared/dtos/find-all-by-declaration.dto';
 
 @Injectable()
 export class AssetsService {
@@ -32,14 +33,27 @@ export class AssetsService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto) {
+  async findAll(findAllDto: FindAllByDeclarationDto, declarationId?: string) {
     try {
-      const { limit = 10, offset = 0 } = paginationDto;
-      const assets = await this.assetRepository.find({
+      const { limit = 10, offset = 0 } = findAllDto;
+      
+      const whereCondition: any = {};
+      if (declarationId || findAllDto.declarationId) {
+        whereCondition.declaration = { id: declarationId || findAllDto.declarationId };
+      }
+      
+      const [assets, total] = await this.assetRepository.findAndCount({
+        where: whereCondition,
         take: limit,
         skip: offset
       });
-      return assets;
+      
+      return {
+        data: assets,
+        total,
+        limit,
+        offset
+      };
     } catch (error) {
       this.logger.error(error);
       throw new BadRequestException(error);

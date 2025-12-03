@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Put, ParseUUIDPipe, 
 import { IncomesService } from './incomes.service';
 import { CreateIncomeDto } from './dto/create-income.dto';
 import { UpdateIncomeDto } from './dto/update-income.dto';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { FindAllByDeclarationDto } from 'src/shared/dtos/find-all-by-declaration.dto';
 import { UserRole } from 'src/shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { ApiTags } from '@nestjs/swagger';
@@ -20,8 +20,8 @@ export class IncomesController {
 
   @Get()
   @Auth()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.incomesService.findAll(paginationDto);
+  findAll(@Query() findAllDto: FindAllByDeclarationDto) {
+    return this.incomesService.findAll(findAllDto, findAllDto.declarationId);
   }
 
   @Get(':term')

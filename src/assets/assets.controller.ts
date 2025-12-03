@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put, ParseUUI
 import { AssetsService } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { FindAllByDeclarationDto } from 'src/shared/dtos/find-all-by-declaration.dto';
 import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Assets')
@@ -16,8 +16,8 @@ export class AssetsController {
   }
 
   @Get()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.assetsService.findAll(paginationDto);
+  findAll(@Query() findAllDto: FindAllByDeclarationDto) {
+    return this.assetsService.findAll(findAllDto, findAllDto.declarationId);
   }
 
   @Get(':term')
