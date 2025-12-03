@@ -24,12 +24,6 @@ export class LiabilitiesController {
     return this.liabilitiesService.findAll(findAllDto, findAllDto.declarationId);
   }
 
-  @Get(':term')
-  @Auth()
-  findOne(@Param('term') term: string) {
-    return this.liabilitiesService.findOne(term);
-  }
-
   @Put(':id')
   @Auth(UserRole.ADMIN)
   update(@Param('id', ParseUUIDPipe) id: string, @Body() updateLiabilityDto: UpdateLiabilityDto) {

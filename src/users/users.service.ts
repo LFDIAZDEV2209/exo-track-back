@@ -175,39 +175,6 @@ export class UsersService {
     }
   }
 
-  async search(term: string, paginationDto?: PaginationDto) {
-    try {
-      const { limit = 10, offset = 0 } = paginationDto || {};
-      
-      const queryBuilder = this.userRepository.createQueryBuilder('user');
-      
-      if (isUUID(term)) {
-        queryBuilder.where('user.id = :term', { term });
-      } else if (!isNaN(Number(term)) && term.trim() !== '') {
-        queryBuilder.where('user.documentNumber = :term', { term });
-      } else if (isEmail(term)) {
-        queryBuilder.where('user.email = :term', { term });
-      } else {
-        queryBuilder.where('user.fullName LIKE :term', { term: `%${term}%` });
-      }
-      
-      const [users, total] = await queryBuilder
-        .take(limit)
-        .skip(offset)
-        .getManyAndCount();
-      
-      return {
-        data: users,
-        total,
-        limit,
-        offset
-      };
-    } catch (error) {
-      this.logger.error(error);
-      throw new BadRequestException(error);
-    }
-  }
-
   async deleteAll() {
     try {
       await this.userRepository.delete({ id: Not(IsNull()) });

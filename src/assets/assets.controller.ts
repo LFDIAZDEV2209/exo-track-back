@@ -20,11 +20,6 @@ export class AssetsController {
     return this.assetsService.findAll(findAllDto, findAllDto.declarationId);
   }
 
-  @Get(':term')
-  findOne(@Param('term') term: string) {
-    return this.assetsService.findOne(term);
-  }
-
   @Put(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() updateAssetDto: UpdateAssetDto) {
     return this.assetsService.update(id, updateAssetDto);
