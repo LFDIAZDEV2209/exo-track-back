@@ -231,7 +231,7 @@ export class SeedService {
 
   // Método para limpiar la base de datos antes de insertar
   // IMPORTANTE: El orden es crucial debido a las foreign keys
-  private async cleanDatabase(): Promise<void> {
+  async cleanDatabase(): Promise<void> {
     this.logger.log('Cleaning database...');
     
     // Eliminar en orden inverso a las dependencias (primero las tablas dependientes)

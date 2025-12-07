@@ -39,6 +39,12 @@ export class DeclarationsController {
     return this.declarationsService.getRecentActivity(limitValue);
   }
 
+  @Get('taxable-years')
+  @Auth()
+  getTaxableYearsByUser(@Query('userId', ParseUUIDPipe) userId: string) {
+    return this.declarationsService.getTaxableYearsByUser(userId);
+  }
+
   // ✅ Ruta dinámica :id al final
   @Get(':id')
   @Auth()

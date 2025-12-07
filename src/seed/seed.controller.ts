@@ -14,4 +14,10 @@ export class SeedController {
   executeSeed() {
     return this.seedService.runSeed();
   }
+
+  @Delete()
+  @Auth(UserRole.ADMIN)
+  cleanDatabase() {
+    return this.seedService.cleanDatabase();
+  }
 }

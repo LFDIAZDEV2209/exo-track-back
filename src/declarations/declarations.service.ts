@@ -191,4 +191,39 @@ export class DeclarationsService {
       throw new BadRequestException(error);
     }
   }
+
+  async getTaxableYearsByUser(userId: string): Promise<number[]> {
+    try {
+      if (!userId) {
+        throw new BadRequestException('userId is required');
+      }
+  
+      // Verificar que el usuario existe (opcional, pero recomendado)
+      const userExists = await this.declarationRepository
+        .createQueryBuilder('declaration')
+        .where('declaration.user_id = :userId', { userId })
+        .getCount();
+  
+      if (userExists === 0) {
+        // Si no tiene declaraciones, retornar array vacío
+        return [];
+      }
+  
+      // Obtener años únicos directamente de la BD
+      const result = await this.declarationRepository
+        .createQueryBuilder('declaration')
+        .select('DISTINCT declaration.taxableYear', 'taxableYear')
+        .where('declaration.user_id = :userId', { userId })
+        .orderBy('declaration.taxableYear', 'DESC')
+        .getRawMany();
+  
+      return result.map(row => row.taxableYear);
+    } catch (error) {
+      this.logger.error(`Error getting taxable years for user ${userId}: ${error.message}`, error.stack);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Error al obtener los años gravables: ${error.message}`);
+    }
+  }
 }
