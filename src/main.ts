@@ -14,7 +14,7 @@ async function bootstrap() {
   }));
 
   app.enableCors({
-    origin: '*',
+    origin: 'https://exo-track-dev.netlify.app',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
