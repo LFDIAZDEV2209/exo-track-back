@@ -188,7 +188,7 @@ export class UsersService {
   async findByDocumentNumber(documentNumber: string) {
     return this.userRepository.findOne({
       where: { documentNumber },
-      select: { id: true, fullName: true, documentNumber: true, password: true }
+      select: { id: true, fullName: true, documentNumber: true, password: true, role: true }
     });
   }
 
