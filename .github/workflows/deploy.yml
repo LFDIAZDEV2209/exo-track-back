@@ -7,31 +7,25 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          script: |
-            set -e
+      - name: Deploy application
+        run: |
+          set -e
 
-            cd /var/www/exo-track-back
+          cd /var/www/exo-track-back
 
-            echo "Updating code..."
-            git pull origin main
+          echo "Updating code..."
+          git pull origin main
 
-            echo "Installing dependencies..."
-            pnpm install --frozen-lockfile
+          echo "Installing dependencies..."
+          pnpm install --frozen-lockfile
 
-            echo "Building application..."
-            pnpm run build
+          echo "Building application..."
+          pnpm run build
 
-            echo "Restarting service..."
-            sudo systemctl restart exotrack-api
+          echo "Restarting service..."
+          sudo systemctl restart exotrack-api
 
-            echo "Deployment finished"
+          echo "Deployment finished"
