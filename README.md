@@ -20,7 +20,7 @@ API REST que potencia la plataforma ExoTrack para la administración tributaria 
 
 ---
 
-## Tabla de contenido 
+## Tabla de contenido
 
 - [Descripción](#-descripción)
 - [Stack](#-stack)
