@@ -17,7 +17,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.enableCors({
-    origin: ['https://exo-track-dev.netlify.app', 'http://localhost:3001'],
+    origin: ['https://exo-track.netlify.app', 'http://localhost:3001'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
