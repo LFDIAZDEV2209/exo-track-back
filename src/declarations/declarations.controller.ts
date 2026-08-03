@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe
 import { DeclarationsService } from './declarations.service';
 import { CreateDeclarationDto } from './dto/create-declaration.dto';
 import { UpdateDeclarationDto } from './dto/update-declaration.dto';
+import { CreateFromExogenaDto } from './dto/create-from-exogena.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { UserRole } from 'src/shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
@@ -17,6 +18,12 @@ export class DeclarationsController {
   @Auth(UserRole.ADMIN)
   create(@Body() createDeclarationDto: CreateDeclarationDto) {
     return this.declarationsService.create(createDeclarationDto);
+  }
+
+  @Post('from-exogena')
+  @Auth(UserRole.ADMIN)
+  createFromExogena(@Body() createFromExogenaDto: CreateFromExogenaDto) {
+    return this.declarationsService.createFromExogena(createFromExogenaDto);
   }
 
   @Get()

@@ -54,6 +54,18 @@ export class Income {
     })
     source: Source;
 
+    @ApiProperty({
+        description: 'Additional detail about the source (exogenous reporter, account, etc.)',
+        example: 'Número de Cuenta / Documento: 9943',
+        required: false
+    })
+    @Column({
+        type: 'text',
+        name: 'source_detail',
+        nullable: true
+    })
+    sourceDetail: string;
+
     @CreateDateColumn({
         name: 'created_at'
     })

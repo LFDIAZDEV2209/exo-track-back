@@ -1,14 +1,19 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CreateDeclarationDto } from './dto/create-declaration.dto';
 import { UpdateDeclarationDto } from './dto/update-declaration.dto';
+import { CreateFromExogenaDto, ExogenaItemDto } from './dto/create-from-exogena.dto';
 import { Declaration } from './entities/declaration.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { Not, IsNull, MoreThanOrEqual } from 'typeorm';
 import { User } from 'src/users/entities/user.entity';
 import { FindAllDeclarationsDto } from './dto/find-all-declarations.dto';
 import { DeclarationStatus } from './enums/declaration-status.enum';
+import { Asset } from 'src/assets/entities/asset.entity';
+import { Income } from 'src/incomes/entities/income.entity';
+import { Liability } from 'src/liabilities/entities/liability.entity';
+import { Source } from 'src/shared/enums/source.enum';
 
 @Injectable()
 export class DeclarationsService {
@@ -18,6 +23,8 @@ export class DeclarationsService {
   constructor(
     @InjectRepository(Declaration)
     private readonly declarationRepository: Repository<Declaration>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(createDeclarationDto: CreateDeclarationDto) {
@@ -28,6 +35,56 @@ export class DeclarationsService {
       });
       await this.declarationRepository.save(declaration);
       return declaration;
+    } catch (error) {
+      this.logger.error(error);
+      throw new BadRequestException(error);
+    }
+  }
+
+  /**
+   * Crea una declaración junto con sus patrimonios, ingresos y deudas en una
+   * sola transacción (origen EXOGENA). Usa inserts por lotes por cada tipo de
+   * ítem para minimizar los round-trips a la base de datos.
+   */
+  async createFromExogena(createFromExogenaDto: CreateFromExogenaDto) {
+    const { userId, taxableYear, description, assets = [], incomes = [], liabilities = [] } = createFromExogenaDto;
+
+    try {
+      const result = await this.dataSource.transaction(async (manager) => {
+        const declaration = manager.create(Declaration, {
+          user: { id: userId } as User,
+          taxableYear,
+          status: DeclarationStatus.PENDING,
+          description: description ?? `Declaración de renta ${taxableYear} - Exógena DIAN`,
+        });
+        const savedDeclaration = await manager.save(declaration);
+
+        const mapItems = (items: ExogenaItemDto[]) =>
+          items.map((item) => ({
+            concept: item.concept,
+            amount: item.amount,
+            source: Source.EXOGENA,
+            sourceDetail: item.sourceDetail ?? undefined,
+            declaration: { id: savedDeclaration.id } as Declaration,
+          }));
+
+        const [assetsResult, incomesResult, liabilitiesResult] = await Promise.all([
+          assets.length > 0 ? manager.insert(Asset, mapItems(assets)) : null,
+          incomes.length > 0 ? manager.insert(Income, mapItems(incomes)) : null,
+          liabilities.length > 0 ? manager.insert(Liability, mapItems(liabilities)) : null,
+        ]);
+
+        return {
+          declaration: savedDeclaration,
+          counts: {
+            assets: assetsResult?.identifiers.length ?? 0,
+            incomes: incomesResult?.identifiers.length ?? 0,
+            liabilities: liabilitiesResult?.identifiers.length ?? 0,
+          },
+        };
+      });
+
+      return result;
     } catch (error) {
       this.logger.error(error);
       throw new BadRequestException(error);
