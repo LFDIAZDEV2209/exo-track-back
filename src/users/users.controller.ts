@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Param, Delete, ParseUUIDPipe, Put, Query }
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { FindAllUsersDto } from './dto/find-all-users.dto';
 import { UserRole } from '../shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { ApiTags } from '@nestjs/swagger';
@@ -19,8 +19,8 @@ export class UsersController {
 
   @Get()
   @Auth(UserRole.ADMIN)
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.usersService.findAll(paginationDto);
+  findAll(@Query() findAllUsersDto: FindAllUsersDto) {
+    return this.usersService.findAll(findAllUsersDto);
   }
 
   @Get('stats')

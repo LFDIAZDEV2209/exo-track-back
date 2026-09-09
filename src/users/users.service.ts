@@ -4,7 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { FindAllUsersDto, SortOrder, UserSortField } from './dto/find-all-users.dto';
 import { isEmail, isNumber, isUUID } from 'class-validator';
 import { Like } from 'typeorm';
 import { Not, IsNull } from 'typeorm';
@@ -34,11 +34,33 @@ export class UsersService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto) {
+  // Columnas ordenables → expresión segura del QueryBuilder (nunca interpolar input crudo).
+  // OJO: el alias "totalDeclarations" no sirve en ORDER BY (Postgres lo pliega a
+  // minúsculas por ser case-sensitive), así que se ordena por la expresión agregada.
+  // El tiebreak usa "user"."id" entrecomillado: 'user.id' a secas lo resuelve al alias
+  // de salida user_id en queries raw.
+  private static readonly SORTABLE_COLUMNS: Record<UserSortField, string> = {
+    fullName: 'user.fullName',
+    documentNumber: 'user.documentNumber',
+    email: 'user.email',
+    createdAt: 'user.createdAt',
+    totalDeclarations: 'COUNT("declaration"."id")',
+  };
+
+  // Escapa comodines de LIKE para que la búsqueda sea literal
+  private escapeLikeWildcards(value: string): string {
+    return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+  }
+
+  async findAll(findAllUsersDto: FindAllUsersDto) {
     try {
-      // ✅ Asegurar que limit y offset sean números
-      const limit = paginationDto.limit ? Number(paginationDto.limit) : 10;
-      const offset = paginationDto.offset ? Number(paginationDto.offset) : 0;
+      // ✅ Asegurar que limit y offset sean números (tope anti-abuso)
+      const limit = findAllUsersDto.limit ? Math.min(Number(findAllUsersDto.limit), 100) : 10;
+      const offset = findAllUsersDto.offset ? Number(findAllUsersDto.offset) : 0;
+      const search = findAllUsersDto.search?.trim() ? findAllUsersDto.search.trim() : undefined;
+      const isActive = findAllUsersDto.isActive;
+      const sortBy: UserSortField = findAllUsersDto.sortBy ?? 'createdAt';
+      const order: SortOrder = findAllUsersDto.order ?? 'DESC';
       
       // ✅ Obtener usuarios con role USER y contar sus declaraciones
       const queryBuilder = this.userRepository
@@ -50,23 +72,52 @@ export class UsersService {
           'user.fullName',
           'user.email',
           'user.phoneNumber',
+          'user.isActive',
           'user.createdAt'
         ])
         .addSelect('COUNT(declaration.id)', 'totalDeclarations')
-        .where('user.role = :role', { role: UserRole.USER })
+        .where('user.role = :role', { role: UserRole.USER });
+
+      if (search) {
+        queryBuilder.andWhere(
+          '(user.fullName ILIKE :search OR user.documentNumber ILIKE :search OR user.email ILIKE :search)',
+          { search: `%${this.escapeLikeWildcards(search)}%` },
+        );
+      }
+
+      if (isActive !== undefined) {
+        queryBuilder.andWhere('user.isActive = :isActive', { isActive });
+      }
+
+      queryBuilder
         .groupBy('user.id')
         .addGroupBy('user.documentNumber')
         .addGroupBy('user.fullName')
         .addGroupBy('user.email')
         .addGroupBy('user.phoneNumber')
+        .addGroupBy('user.isActive')
         .addGroupBy('user.createdAt')
+        .orderBy(UsersService.SORTABLE_COLUMNS[sortBy], order)
+        .addOrderBy('"user"."id"', 'ASC')
         .limit(limit)  // ✅ Usar limit() en lugar de take()
         .offset(offset);  // ✅ Usar offset() en lugar de skip()
       
-      // ✅ Obtener total correcto (contar usuarios únicos, no grupos)
+      // ✅ Obtener total con los mismos filtros (paginación consistente)
       const totalQuery = this.userRepository
         .createQueryBuilder('user')
         .where('user.role = :role', { role: UserRole.USER });
+
+      if (search) {
+        totalQuery.andWhere(
+          '(user.fullName ILIKE :search OR user.documentNumber ILIKE :search OR user.email ILIKE :search)',
+          { search: `%${this.escapeLikeWildcards(search)}%` },
+        );
+      }
+
+      if (isActive !== undefined) {
+        totalQuery.andWhere('user.isActive = :isActive', { isActive });
+      }
+
       const total = await totalQuery.getCount();
       
       // ✅ Ejecutar query con paginación
@@ -79,6 +130,7 @@ export class UsersService {
         fullName: user.user_full_name,
         email: user.user_email,
         phoneNumber: user.user_phone_number,
+        isActive: user.user_is_active ?? true,
         totalDeclarations: parseInt(user.totalDeclarations) || 0,
         createdAt: user.user_created_at || new Date()
       }));
