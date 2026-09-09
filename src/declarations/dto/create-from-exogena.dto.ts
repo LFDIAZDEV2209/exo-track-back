@@ -27,6 +27,11 @@ export class ExogenaItemDto {
     @IsString()
     sourceDetail?: string;
 
+    // Subtipo a asignar (mismo ámbito del arreglo destino). Se valida en el servicio.
+    @IsOptional()
+    @IsUUID()
+    subtypeId?: string;
+
     // Tercero reportante (DIAN). Solo se persiste en ítems no catalogados.
     @IsOptional()
     @IsString()

@@ -79,12 +79,32 @@ export class DeclarationsService {
         });
         const savedDeclaration = await manager.save(declaration);
 
-        const mapItems = (items: ExogenaItemDto[]) =>
+        // Resuelve una sola vez cada subtipo referenciado (por ámbito del arreglo).
+        // Referencia inválida => 400 y rollback total (fail fast, nada a medias).
+        const resolveSubtypes = async (items: ExogenaItemDto[], scope: ItemScope) => {
+          const ids = [...new Set(items.map((item) => item.subtypeId).filter((id): id is string => !!id))];
+          const resolved = new Map<string, ConceptSubtype>();
+          for (const id of ids) {
+            resolved.set(
+              id,
+              await this.conceptSubtypesService.resolveForItem(manager, id, scope),
+            );
+          }
+          return resolved;
+        };
+        const [assetSubtypes, incomeSubtypes, liabilitySubtypes] = await Promise.all([
+          resolveSubtypes(assets, ItemScope.ASSET),
+          resolveSubtypes(incomes, ItemScope.INCOME),
+          resolveSubtypes(liabilities, ItemScope.LIABILITY),
+        ]);
+
+        const mapItems = (items: ExogenaItemDto[], subtypes: Map<string, ConceptSubtype>) =>
           items.map((item) => ({
             concept: item.concept,
             amount: item.amount,
             source: Source.EXOGENA,
             sourceDetail: item.sourceDetail ?? undefined,
+            subtype: item.subtypeId ? subtypes.get(item.subtypeId) : undefined,
             declaration: { id: savedDeclaration.id } as Declaration,
           }));
 
@@ -100,9 +120,9 @@ export class DeclarationsService {
           }));
 
         const [assetsResult, incomesResult, liabilitiesResult, unclassifiedResult] = await Promise.all([
-          assets.length > 0 ? manager.insert(Asset, mapItems(assets)) : null,
-          incomes.length > 0 ? manager.insert(Income, mapItems(incomes)) : null,
-          liabilities.length > 0 ? manager.insert(Liability, mapItems(liabilities)) : null,
+          assets.length > 0 ? manager.insert(Asset, mapItems(assets, assetSubtypes)) : null,
+          incomes.length > 0 ? manager.insert(Income, mapItems(incomes, incomeSubtypes)) : null,
+          liabilities.length > 0 ? manager.insert(Liability, mapItems(liabilities, liabilitySubtypes)) : null,
           unclassified.length > 0 ? manager.insert(UnclassifiedItem, mapUnclassified(unclassified)) : null,
         ]);
 
