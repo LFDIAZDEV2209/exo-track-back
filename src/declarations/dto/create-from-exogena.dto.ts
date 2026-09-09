@@ -26,6 +26,15 @@ export class ExogenaItemDto {
     @IsOptional()
     @IsString()
     sourceDetail?: string;
+
+    // Tercero reportante (DIAN). Solo se persiste en ítems no catalogados.
+    @IsOptional()
+    @IsString()
+    reporterName?: string;
+
+    @IsOptional()
+    @IsString()
+    reporterNit?: string;
 }
 
 export class CreateFromExogenaDto {
@@ -59,4 +68,12 @@ export class CreateFromExogenaDto {
     @ValidateNested({ each: true })
     @Type(() => ExogenaItemDto)
     liabilities?: ExogenaItemDto[];
+
+    // Conceptos exógenos sin clasificación: se persisten como no catalogados,
+    // nunca se descartan.
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ExogenaItemDto)
+    unclassified?: ExogenaItemDto[];
 }

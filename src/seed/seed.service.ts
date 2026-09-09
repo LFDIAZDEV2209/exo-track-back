@@ -3,6 +3,8 @@ import { UsersService } from 'src/users/users.service';
 import { AssetsService } from 'src/assets/assets.service';
 import { LiabilitiesService } from 'src/liabilities/liabilities.service';
 import { IncomesService } from 'src/incomes/incomes.service';
+import { CustomItemsService } from 'src/custom-items/custom-items.service';
+import { UnclassifiedItemsService } from 'src/unclassified-items/unclassified-items.service';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
 import { initialData } from './data/seed-data';
 import { User } from 'src/users/entities/user.entity';
@@ -21,6 +23,8 @@ export class SeedService {
     private readonly assetsService: AssetsService,
     private readonly liabilitiesService: LiabilitiesService,
     private readonly incomesService: IncomesService,
+    private readonly customItemsService: CustomItemsService,
+    private readonly unclassifiedItemsService: UnclassifiedItemsService,
     private readonly declarationsService: DeclarationsService,
   ) {}
 
@@ -234,10 +238,13 @@ export class SeedService {
   async cleanDatabase(): Promise<void> {
     this.logger.log('Cleaning database...');
     
-    // Eliminar en orden inverso a las dependencias (primero las tablas dependientes)
+    // Eliminar en orden inverso a las dependencias (primero las tablas dependientes).
+    // Los tipos de concepto se preservan: son configuración del administrador.
     await this.assetsService.deleteAll();
     await this.liabilitiesService.deleteAll();
     await this.incomesService.deleteAll();
+    await this.customItemsService.deleteAll();
+    await this.unclassifiedItemsService.deleteAll();
     await this.declarationsService.deleteAll();
     await this.usersService.deleteAll();
     

@@ -3,6 +3,7 @@ import { DeclarationsService } from './declarations.service';
 import { CreateDeclarationDto } from './dto/create-declaration.dto';
 import { UpdateDeclarationDto } from './dto/update-declaration.dto';
 import { CreateFromExogenaDto } from './dto/create-from-exogena.dto';
+import { MoveItemDto } from './dto/move-item.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { UserRole } from 'src/shared/enums/user-role.enum';
 import { Auth } from 'src/auth/decorators/auth.decorator';
@@ -24,6 +25,14 @@ export class DeclarationsController {
   @Auth(UserRole.ADMIN)
   createFromExogena(@Body() createFromExogenaDto: CreateFromExogenaDto) {
     return this.declarationsService.createFromExogena(createFromExogenaDto);
+  }
+
+  // Mueve (re-cataloga) un ítem entre patrimonios/ingresos/deudas/tipos
+  // personalizados, o cataloga un no clasificado. Transacción atómica.
+  @Post(':id/move-item')
+  @Auth(UserRole.ADMIN)
+  moveItem(@Param('id', ParseUUIDPipe) id: string, @Body() moveItemDto: MoveItemDto) {
+    return this.declarationsService.moveFinancialItem(id, moveItemDto);
   }
 
   @Get()

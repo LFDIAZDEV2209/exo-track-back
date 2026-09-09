@@ -2,9 +2,10 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { CreateDeclarationDto } from './dto/create-declaration.dto';
 import { UpdateDeclarationDto } from './dto/update-declaration.dto';
 import { CreateFromExogenaDto, ExogenaItemDto } from './dto/create-from-exogena.dto';
+import { MoveItemDto, MoveableFromKind, MoveableToKind } from './dto/move-item.dto';
 import { Declaration } from './entities/declaration.entity';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityTarget, Repository } from 'typeorm';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { Not, IsNull, MoreThanOrEqual } from 'typeorm';
 import { User } from 'src/users/entities/user.entity';
@@ -13,6 +14,9 @@ import { DeclarationStatus } from './enums/declaration-status.enum';
 import { Asset } from 'src/assets/entities/asset.entity';
 import { Income } from 'src/incomes/entities/income.entity';
 import { Liability } from 'src/liabilities/entities/liability.entity';
+import { CustomItem } from 'src/custom-items/entities/custom-item.entity';
+import { UnclassifiedItem } from 'src/unclassified-items/entities/unclassified-item.entity';
+import { ConceptType } from 'src/concept-types/entities/concept-type.entity';
 import { Source } from 'src/shared/enums/source.enum';
 
 @Injectable()
@@ -41,13 +45,25 @@ export class DeclarationsService {
     }
   }
 
+  // Tablas movibles por kind (whitelist interna: nunca llega input crudo aquí).
+  // MoveableFromKind es el superconjunto (incluye 'unclassified' como origen).
+  private static readonly ITEM_ENTITIES: Record<MoveableFromKind, EntityTarget<any>> = {
+    asset: Asset,
+    income: Income,
+    liability: Liability,
+    custom: CustomItem,
+    unclassified: UnclassifiedItem,
+  };
+
   /**
-   * Crea una declaración junto con sus patrimonios, ingresos y deudas en una
-   * sola transacción (origen EXOGENA). Usa inserts por lotes por cada tipo de
-   * ítem para minimizar los round-trips a la base de datos.
+   * Crea una declaración junto con sus patrimonios, ingresos, deudas y
+   * conceptos no catalogados en una sola transacción (origen EXOGENA).
+   * Usa inserts por lotes por cada tipo de ítem para minimizar los
+   * round-trips a la base de datos. Nada se descarta: lo no clasificado
+   * se persiste en unclassified_items.
    */
   async createFromExogena(createFromExogenaDto: CreateFromExogenaDto) {
-    const { userId, taxableYear, description, assets = [], incomes = [], liabilities = [] } = createFromExogenaDto;
+    const { userId, taxableYear, description, assets = [], incomes = [], liabilities = [], unclassified = [] } = createFromExogenaDto;
 
     try {
       const result = await this.dataSource.transaction(async (manager) => {
@@ -68,10 +84,22 @@ export class DeclarationsService {
             declaration: { id: savedDeclaration.id } as Declaration,
           }));
 
-        const [assetsResult, incomesResult, liabilitiesResult] = await Promise.all([
+        const mapUnclassified = (items: ExogenaItemDto[]) =>
+          items.map((item) => ({
+            concept: item.concept,
+            amount: item.amount,
+            source: Source.EXOGENA,
+            sourceDetail: item.sourceDetail ?? undefined,
+            reporterName: item.reporterName?.trim() || undefined,
+            reporterNit: item.reporterNit?.trim() || undefined,
+            declaration: { id: savedDeclaration.id } as Declaration,
+          }));
+
+        const [assetsResult, incomesResult, liabilitiesResult, unclassifiedResult] = await Promise.all([
           assets.length > 0 ? manager.insert(Asset, mapItems(assets)) : null,
           incomes.length > 0 ? manager.insert(Income, mapItems(incomes)) : null,
           liabilities.length > 0 ? manager.insert(Liability, mapItems(liabilities)) : null,
+          unclassified.length > 0 ? manager.insert(UnclassifiedItem, mapUnclassified(unclassified)) : null,
         ]);
 
         return {
@@ -80,6 +108,7 @@ export class DeclarationsService {
             assets: assetsResult?.identifiers.length ?? 0,
             incomes: incomesResult?.identifiers.length ?? 0,
             liabilities: liabilitiesResult?.identifiers.length ?? 0,
+            unclassified: unclassifiedResult?.identifiers.length ?? 0,
           },
         };
       });
@@ -87,6 +116,80 @@ export class DeclarationsService {
       return result;
     } catch (error) {
       this.logger.error(error);
+      throw new BadRequestException(error);
+    }
+  }
+
+  /**
+   * Mueve (re-cataloga) un ítem entre tablas: asset/income/liability/custom
+   * y desde unclassified hacia cualquiera de ellas. Catalogar un concepto
+   * no clasificado es un caso particular de este movimiento.
+   *
+   * Todo ocurre en una sola transacción: inserta en destino y elimina el
+   * origen. Si algo falla, no se pierde ni se duplica información.
+   */
+  async moveFinancialItem(declarationId: string, moveItemDto: MoveItemDto) {
+    const { itemId, from, to, customTypeId } = moveItemDto;
+
+    if (from === to && to !== 'custom') {
+      throw new BadRequestException('Source and destination must be different');
+    }
+    if (to === 'custom' && !customTypeId) {
+      throw new BadRequestException('customTypeId is required when destination is a custom type');
+    }
+
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const sourceRepository = manager.getRepository(DeclarationsService.ITEM_ENTITIES[from]);
+        const source = await sourceRepository.findOne({
+          where: { id: itemId },
+          relations: { declaration: true, ...(from === 'custom' ? { conceptType: true } : {}) },
+        });
+        if (!source) {
+          throw new NotFoundException(`${from} item not found`);
+        }
+        if (source.declaration?.id !== declarationId) {
+          throw new BadRequestException('Item does not belong to this declaration');
+        }
+
+        let conceptType: ConceptType | undefined;
+        if (to === 'custom') {
+          const found = await manager.findOneBy(ConceptType, { id: customTypeId });
+          if (!found) {
+            throw new NotFoundException('Concept type not found');
+          }
+          if (!found.isActive) {
+            throw new BadRequestException('Cannot move items to an inactive concept type');
+          }
+          conceptType = found;
+        }
+
+        const destinationRepository = manager.getRepository(DeclarationsService.ITEM_ENTITIES[to]);
+        const destination = destinationRepository.create({
+          concept: source.concept,
+          amount: source.amount,
+          source: source.source,
+          sourceDetail: source.sourceDetail ?? undefined,
+          declaration: { id: declarationId } as Declaration,
+          ...(to === 'custom' ? { conceptType: { id: conceptType!.id } as ConceptType } : {}),
+        });
+        const saved = await destinationRepository.save(destination);
+        await sourceRepository.delete(itemId);
+
+        return {
+          item: {
+            ...saved,
+            ...(to === 'custom' ? { conceptType } : {}),
+          },
+          from,
+          to,
+        };
+      });
+    } catch (error) {
+      this.logger.error(error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(error);
     }
   }

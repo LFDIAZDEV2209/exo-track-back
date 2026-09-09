@@ -6,6 +6,8 @@ import { DeclarationsModule } from 'src/declarations/declarations.module';
 import { AssetsModule } from 'src/assets/assets.module';
 import { LiabilitiesModule } from 'src/liabilities/liabilities.module';
 import { IncomesModule } from 'src/incomes/incomes.module';
+import { CustomItemsModule } from 'src/custom-items/custom-items.module';
+import { UnclassifiedItemsModule } from 'src/unclassified-items/unclassified-items.module';
 import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
@@ -17,6 +19,8 @@ import { AuthModule } from 'src/auth/auth.module';
     AssetsModule,
     LiabilitiesModule,
     IncomesModule,
+    CustomItemsModule,
+    UnclassifiedItemsModule,
     AuthModule
  ]
 })

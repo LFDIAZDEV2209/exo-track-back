@@ -2,6 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Asset } from 'src/assets/entities/asset.entity';
 import { Income } from 'src/incomes/entities/income.entity';
 import { Liability } from 'src/liabilities/entities/liability.entity';
+import { CustomItem } from 'src/custom-items/entities/custom-item.entity';
+import { UnclassifiedItem } from 'src/unclassified-items/entities/unclassified-item.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { DeclarationStatus } from '../enums/declaration-status.enum';
@@ -73,4 +75,10 @@ export class Declaration {
 
     @OneToMany(() => Income, (income) => income.declaration)
     incomes: Income[];
+
+    @OneToMany(() => CustomItem, (customItem) => customItem.declaration)
+    customItems: CustomItem[];
+
+    @OneToMany(() => UnclassifiedItem, (unclassifiedItem) => unclassifiedItem.declaration)
+    unclassifiedItems: UnclassifiedItem[];
 }
