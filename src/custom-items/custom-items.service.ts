@@ -8,6 +8,8 @@ import { isUUID } from 'class-validator';
 import { CustomItem } from './entities/custom-item.entity';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
 import { ConceptType } from 'src/concept-types/entities/concept-type.entity';
+import { ConceptSubtypesService } from 'src/concept-subtypes/concept-subtypes.service';
+import { ItemScope } from 'src/shared/enums/item-scope.enum';
 
 @Injectable()
 export class CustomItemsService {
@@ -17,6 +19,7 @@ export class CustomItemsService {
   constructor(
     @InjectRepository(CustomItem)
     private readonly customItemRepository: Repository<CustomItem>,
+    private readonly conceptSubtypesService: ConceptSubtypesService,
   ) {}
 
   async create(createCustomItemDto: CreateCustomItemDto) {
@@ -36,6 +39,14 @@ export class CustomItemsService {
         declaration: { id: createCustomItemDto.declarationId } as Declaration,
         conceptType: { id: createCustomItemDto.conceptTypeId } as ConceptType,
       });
+      if (createCustomItemDto.subtypeId) {
+        item.subtype = await this.conceptSubtypesService.resolveForItem(
+          this.customItemRepository.manager,
+          createCustomItemDto.subtypeId,
+          ItemScope.CUSTOM,
+          createCustomItemDto.conceptTypeId,
+        );
+      }
       await this.customItemRepository.save(item);
       return item;
     } catch (error) {
@@ -61,7 +72,7 @@ export class CustomItemsService {
 
       const [items, total] = await this.customItemRepository.findAndCount({
         where: whereCondition,
-        relations: { conceptType: true },
+        relations: { conceptType: true, subtype: true },
         take: limit,
         skip: offset,
       });
@@ -122,6 +133,17 @@ export class CustomItemsService {
       }
       if (updateCustomItemDto.amount !== undefined) {
         item.amount = updateCustomItemDto.amount;
+      }
+      // subtypeId: uuid reasigna (contra el tipo vigente), null lo quita, ausente no toca
+      if (updateCustomItemDto.subtypeId !== undefined) {
+        item.subtype = updateCustomItemDto.subtypeId
+          ? await this.conceptSubtypesService.resolveForItem(
+              this.customItemRepository.manager,
+              updateCustomItemDto.subtypeId,
+              ItemScope.CUSTOM,
+              item.conceptType?.id,
+            )
+          : null;
       }
 
       await this.customItemRepository.save(item);

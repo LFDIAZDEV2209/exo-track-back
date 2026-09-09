@@ -8,6 +8,8 @@ import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isUUID } from 'class-validator';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
 import { FindAllByDeclarationDto } from 'src/shared/dtos/find-all-by-declaration.dto';
+import { ConceptSubtypesService } from 'src/concept-subtypes/concept-subtypes.service';
+import { ItemScope } from 'src/shared/enums/item-scope.enum';
 
 @Injectable()
 export class IncomesService {
@@ -17,18 +19,30 @@ export class IncomesService {
   constructor(
     @InjectRepository(Income)
     private readonly incomeRepository: Repository<Income>,
+    private readonly conceptSubtypesService: ConceptSubtypesService,
   ) {}
 
   async create(createIncomeDto: CreateIncomeDto) {
     try {
+      const { declarationId, subtypeId, ...rest } = createIncomeDto;
       const income = this.incomeRepository.create({
-        ...createIncomeDto,
-        declaration: { id: createIncomeDto.declarationId } as Declaration
+        ...rest,
+        declaration: { id: declarationId } as Declaration
       });
+      if (subtypeId) {
+        income.subtype = await this.conceptSubtypesService.resolveForItem(
+          this.incomeRepository.manager,
+          subtypeId,
+          ItemScope.INCOME,
+        );
+      }
       await this.incomeRepository.save(income);
       return income;
     } catch (error) {
       this.logger.error(error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(error);
     }
   }
@@ -44,6 +58,7 @@ export class IncomesService {
       
       const [incomes, total] = await this.incomeRepository.findAndCount({
         where: whereCondition,
+        relations: { subtype: true },
         take: limit,
         skip: offset
       });
@@ -64,7 +79,10 @@ export class IncomesService {
     try {
       let income: Income | null = null;
       if (isUUID(term)) {
-        income = await this.incomeRepository.findOneBy({ id: term });
+        income = await this.incomeRepository.findOne({
+          where: { id: term },
+          relations: { subtype: true },
+        });
       } else {
         income = await this.incomeRepository.findOne({
           where: {
@@ -92,6 +110,16 @@ export class IncomesService {
       }
       if (updateIncomeDto.amount !== undefined) {
         income.amount = updateIncomeDto.amount;
+      }
+      // subtypeId: uuid reasigna, null explícito lo quita, ausente no toca
+      if (updateIncomeDto.subtypeId !== undefined) {
+        income.subtype = updateIncomeDto.subtypeId
+          ? await this.conceptSubtypesService.resolveForItem(
+              this.incomeRepository.manager,
+              updateIncomeDto.subtypeId,
+              ItemScope.INCOME,
+            )
+          : null;
       }
       
       // Guardar los cambios en la base de datos

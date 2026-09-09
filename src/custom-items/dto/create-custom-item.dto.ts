@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsPositive, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUUID } from 'class-validator';
 
 export class CreateCustomItemDto {
 
@@ -18,4 +18,8 @@ export class CreateCustomItemDto {
     @IsNotEmpty()
     @IsPositive()
     amount: number;
+
+    @IsOptional()
+    @IsUUID()
+    subtypeId?: string;
 }

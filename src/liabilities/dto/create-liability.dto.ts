@@ -15,4 +15,8 @@ export class CreateLiabilityDto {
     @IsNotEmpty()
     @IsPositive()
     amount: number;
+
+    @IsOptional()
+    @IsUUID()
+    subtypeId?: string;
 }

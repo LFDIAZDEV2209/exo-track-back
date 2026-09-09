@@ -9,6 +9,7 @@ import { IncomesModule } from './incomes/incomes.module';
 import { ConceptTypesModule } from './concept-types/concept-types.module';
 import { CustomItemsModule } from './custom-items/custom-items.module';
 import { UnclassifiedItemsModule } from './unclassified-items/unclassified-items.module';
+import { ConceptSubtypesModule } from './concept-subtypes/concept-subtypes.module';
 import { CommonModule } from './common/common.module';
 import { SeedModule } from './seed/seed.module';
 import { AuthModule } from './auth/auth.module';
@@ -46,6 +47,8 @@ import { AuthModule } from './auth/auth.module';
     CustomItemsModule,
 
     UnclassifiedItemsModule,
+
+    ConceptSubtypesModule,
 
     CommonModule,
 

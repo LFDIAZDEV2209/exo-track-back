@@ -35,4 +35,10 @@ export class MoveItemDto {
     @IsOptional()
     @IsUUID()
     customTypeId?: string;
+
+    // Subtipo a asignar en destino (mismo ámbito). Si se omite, se conserva
+    // el del origen cuando es compatible; si no, se limpia.
+    @IsOptional()
+    @IsUUID()
+    subtypeId?: string;
 }

@@ -7,6 +7,8 @@ import { Liability } from './entities/liability.entity';
 import { isUUID } from 'class-validator';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
 import { FindAllByDeclarationDto } from 'src/shared/dtos/find-all-by-declaration.dto';
+import { ConceptSubtypesService } from 'src/concept-subtypes/concept-subtypes.service';
+import { ItemScope } from 'src/shared/enums/item-scope.enum';
 
 @Injectable()
 export class LiabilitiesService {
@@ -16,18 +18,30 @@ export class LiabilitiesService {
   constructor(
     @InjectRepository(Liability)
     private readonly liabilityRepository: Repository<Liability>,
+    private readonly conceptSubtypesService: ConceptSubtypesService,
   ) {}
 
   async create(createLiabilityDto: CreateLiabilityDto) {
     try {
+      const { declarationId, subtypeId, ...rest } = createLiabilityDto;
       const liability = this.liabilityRepository.create({
-        ...createLiabilityDto,
-        declaration: { id: createLiabilityDto.declarationId } as Declaration
+        ...rest,
+        declaration: { id: declarationId } as Declaration
       });
+      if (subtypeId) {
+        liability.subtype = await this.conceptSubtypesService.resolveForItem(
+          this.liabilityRepository.manager,
+          subtypeId,
+          ItemScope.LIABILITY,
+        );
+      }
       await this.liabilityRepository.save(liability);
       return liability;
     } catch (error) {
       this.logger.error(error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(error);
     }
   }
@@ -43,6 +57,7 @@ export class LiabilitiesService {
       
       const [liabilities, total] = await this.liabilityRepository.findAndCount({
         where: whereCondition,
+        relations: { subtype: true },
         take: limit,
         skip: offset
       });
@@ -91,6 +106,16 @@ export class LiabilitiesService {
       }
       if (updateLiabilityDto.amount !== undefined) {
         liability.amount = updateLiabilityDto.amount;
+      }
+      // subtypeId: uuid reasigna, null explícito lo quita, ausente no toca
+      if (updateLiabilityDto.subtypeId !== undefined) {
+        liability.subtype = updateLiabilityDto.subtypeId
+          ? await this.conceptSubtypesService.resolveForItem(
+              this.liabilityRepository.manager,
+              updateLiabilityDto.subtypeId,
+              ItemScope.LIABILITY,
+            )
+          : null;
       }
       
       // Guardar los cambios en la base de datos

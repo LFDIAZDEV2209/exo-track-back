@@ -15,4 +15,9 @@ export class UpdateCustomItemDto {
     @IsNumber()
     @IsPositive()
     amount?: number;
+
+    // uuid reasigna, null explícito lo quita, ausente no toca
+    @IsOptional()
+    @IsUUID()
+    subtypeId?: string | null;
 }

@@ -17,6 +17,9 @@ import { Liability } from 'src/liabilities/entities/liability.entity';
 import { CustomItem } from 'src/custom-items/entities/custom-item.entity';
 import { UnclassifiedItem } from 'src/unclassified-items/entities/unclassified-item.entity';
 import { ConceptType } from 'src/concept-types/entities/concept-type.entity';
+import { ConceptSubtype } from 'src/concept-subtypes/entities/concept-subtype.entity';
+import { ConceptSubtypesService } from 'src/concept-subtypes/concept-subtypes.service';
+import { ItemScope } from 'src/shared/enums/item-scope.enum';
 import { Source } from 'src/shared/enums/source.enum';
 
 @Injectable()
@@ -29,6 +32,7 @@ export class DeclarationsService {
     private readonly declarationRepository: Repository<Declaration>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
+    private readonly conceptSubtypesService: ConceptSubtypesService,
   ) {}
 
   async create(createDeclarationDto: CreateDeclarationDto) {
@@ -129,7 +133,7 @@ export class DeclarationsService {
    * origen. Si algo falla, no se pierde ni se duplica información.
    */
   async moveFinancialItem(declarationId: string, moveItemDto: MoveItemDto) {
-    const { itemId, from, to, customTypeId } = moveItemDto;
+    const { itemId, from, to, customTypeId, subtypeId } = moveItemDto;
 
     if (from === to && to !== 'custom') {
       throw new BadRequestException('Source and destination must be different');
@@ -143,7 +147,11 @@ export class DeclarationsService {
         const sourceRepository = manager.getRepository(DeclarationsService.ITEM_ENTITIES[from]);
         const source = await sourceRepository.findOne({
           where: { id: itemId },
-          relations: { declaration: true, ...(from === 'custom' ? { conceptType: true } : {}) },
+          relations: {
+            declaration: true,
+            subtype: true,
+            ...(from === 'custom' ? { conceptType: true } : {}),
+          },
         });
         if (!source) {
           throw new NotFoundException(`${from} item not found`);
@@ -164,12 +172,34 @@ export class DeclarationsService {
           conceptType = found;
         }
 
+        // Subtipo destino: explícito > conservado si compatible > limpio.
+        // Ámbitos distintos (o tipos custom distintos) limpian el subtipo.
+        const toScope = to === 'custom' ? ItemScope.CUSTOM : (to as unknown as ItemScope);
+        const destConceptTypeId = to === 'custom' ? conceptType!.id : undefined;
+        let subtype: ConceptSubtype | null = null;
+        if (subtypeId) {
+          subtype = await this.conceptSubtypesService.resolveForItem(
+            manager,
+            subtypeId,
+            toScope,
+            destConceptTypeId,
+          );
+        } else if (
+          source.subtype &&
+          source.subtype.scope === toScope &&
+          (toScope !== ItemScope.CUSTOM || source.subtype.conceptType?.id === destConceptTypeId)
+        ) {
+          subtype = source.subtype;
+        }
+        const subtypeCleared = !!source.subtype && !subtype && !subtypeId;
+
         const destinationRepository = manager.getRepository(DeclarationsService.ITEM_ENTITIES[to]);
         const destination = destinationRepository.create({
           concept: source.concept,
           amount: source.amount,
           source: source.source,
           sourceDetail: source.sourceDetail ?? undefined,
+          subtype: subtype ?? undefined,
           declaration: { id: declarationId } as Declaration,
           ...(to === 'custom' ? { conceptType: { id: conceptType!.id } as ConceptType } : {}),
         });
@@ -183,6 +213,7 @@ export class DeclarationsService {
           },
           from,
           to,
+          subtypeCleared,
         };
       });
     } catch (error) {

@@ -8,6 +8,8 @@ import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isUUID } from 'class-validator';
 import { Declaration } from 'src/declarations/entities/declaration.entity';
 import { FindAllByDeclarationDto } from 'src/shared/dtos/find-all-by-declaration.dto';
+import { ConceptSubtypesService } from 'src/concept-subtypes/concept-subtypes.service';
+import { ItemScope } from 'src/shared/enums/item-scope.enum';
 
 @Injectable()
 export class AssetsService {
@@ -17,18 +19,30 @@ export class AssetsService {
   constructor(
     @InjectRepository(Asset)
     private readonly assetRepository: Repository<Asset>,
+    private readonly conceptSubtypesService: ConceptSubtypesService,
   ) {}
 
   async create(createAssetDto: CreateAssetDto) {
     try {
+      const { declarationId, subtypeId, ...rest } = createAssetDto;
       const asset = this.assetRepository.create({
-        ...createAssetDto,
-        declaration: { id: createAssetDto.declarationId } as Declaration
+        ...rest,
+        declaration: { id: declarationId } as Declaration
       });
+      if (subtypeId) {
+        asset.subtype = await this.conceptSubtypesService.resolveForItem(
+          this.assetRepository.manager,
+          subtypeId,
+          ItemScope.ASSET,
+        );
+      }
       await this.assetRepository.save(asset);
       return asset;
     } catch (error) {
       this.logger.error(error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(error);
     }
   }
@@ -44,6 +58,7 @@ export class AssetsService {
       
       const [assets, total] = await this.assetRepository.findAndCount({
         where: whereCondition,
+        relations: { subtype: true },
         take: limit,
         skip: offset
       });
@@ -92,6 +107,16 @@ export class AssetsService {
       }
       if (updateAssetDto.amount !== undefined) {
         asset.amount = updateAssetDto.amount;
+      }
+      // subtypeId: uuid reasigna, null explícito lo quita, ausente no toca
+      if (updateAssetDto.subtypeId !== undefined) {
+        asset.subtype = updateAssetDto.subtypeId
+          ? await this.conceptSubtypesService.resolveForItem(
+              this.assetRepository.manager,
+              updateAssetDto.subtypeId,
+              ItemScope.ASSET,
+            )
+          : null;
       }
       
       // Guardar los cambios en la base de datos

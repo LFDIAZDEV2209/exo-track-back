@@ -1,7 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Source } from "src/shared/enums/source.enum";
 import { Declaration } from "src/declarations/entities/declaration.entity";
+import { ConceptSubtype } from "src/concept-subtypes/entities/concept-subtype.entity";
 
 @Entity({name: 'incomes'})
 export class Income {
@@ -65,6 +66,15 @@ export class Income {
         nullable: true
     })
     sourceDetail: string;
+
+    @ApiProperty({
+        description: 'The concept subtype (e.g. Dividendos). Null = no subtype.',
+        required: false
+    })
+    @Index()
+    @ManyToOne(() => ConceptSubtype, { onDelete: 'SET NULL', nullable: true })
+    @JoinColumn({ name: 'subtype_id' })
+    subtype: ConceptSubtype | null;
 
     @CreateDateColumn({
         name: 'created_at'

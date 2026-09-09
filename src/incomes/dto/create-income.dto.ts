@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsUUID, IsNumber, IsPositive } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString, IsUUID, IsNumber, IsPositive } from "class-validator";
 
 export class CreateIncomeDto {
 
@@ -14,4 +14,8 @@ export class CreateIncomeDto {
     @IsNotEmpty()
     @IsPositive()
     amount: number;
+
+    @IsOptional()
+    @IsUUID()
+    subtypeId?: string;
 }
