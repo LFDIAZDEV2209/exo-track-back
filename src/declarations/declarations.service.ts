@@ -59,6 +59,33 @@ export class DeclarationsService {
     unclassified: UnclassifiedItem,
   };
 
+  // Solo UnclassifiedItem tiene columnas de reportante (reporter_name/nit):
+  // al salir de esa tabla se pliegan a source_detail para no perder
+  // información de la DIAN. Idempotente si ya estaban incluidas.
+  // Parámetros unknown: el origen del move es any por diseño.
+  private static foldReporterIntoSourceDetail(
+    sourceDetail: unknown,
+    reporterName: unknown,
+    reporterNit: unknown,
+  ): string | undefined {
+    const base = typeof sourceDetail === 'string' ? sourceDetail.trim() : '';
+    const name = typeof reporterName === 'string' ? reporterName.trim() : '';
+    const nit = typeof reporterNit === 'string' ? reporterNit.trim() : '';
+    let label = '';
+    if (name && nit) {
+      label = `${name} (NIT ${nit})`;
+    } else if (name) {
+      label = name;
+    } else if (nit) {
+      label = `NIT ${nit}`;
+    }
+    if (label && ((name && base.includes(name)) || (nit && base.includes(nit)))) {
+      return base || undefined;
+    }
+    const parts = [label, base].filter((part) => part.length > 0);
+    return parts.length > 0 ? parts.join(' | ') : undefined;
+  }
+
   /**
    * Crea una declaración junto con sus patrimonios, ingresos, deudas,
    * ítems personalizados y conceptos no catalogados en una sola
@@ -160,25 +187,13 @@ export class DeclarationsService {
           }));
 
         // CustomItem no tiene columnas de reportante: se pliega a
-        // sourceDetail para no perder información de la DIAN.
-        const foldCustomSourceDetail = (item: ExogenaCustomItemDto): string | undefined => {
-          const base = item.sourceDetail?.trim() || '';
-          const reporterName = item.reporterName?.trim() || '';
-          const reporterNit = item.reporterNit?.trim() || '';
-          let label = '';
-          if (reporterName && reporterNit) {
-            label = `${reporterName} (NIT ${reporterNit})`;
-          } else if (reporterName) {
-            label = reporterName;
-          } else if (reporterNit) {
-            label = `NIT ${reporterNit}`;
-          }
-          if (label && (base.includes(reporterName || '~~~') || (reporterNit && base.includes(reporterNit)))) {
-            return base || undefined;
-          }
-          const parts = [label, base].filter((part) => part && part.length > 0);
-          return parts.length > 0 ? parts.join(' | ') : undefined;
-        };
+        // source_detail para no perder información de la DIAN.
+        const foldCustomSourceDetail = (item: ExogenaCustomItemDto): string | undefined =>
+          DeclarationsService.foldReporterIntoSourceDetail(
+            item.sourceDetail,
+            item.reporterName,
+            item.reporterNit,
+          );
 
         const mapCustom = (items: ExogenaCustomItemDto[]) =>
           items.map((item) => ({
@@ -241,11 +256,13 @@ export class DeclarationsService {
     try {
       return await this.dataSource.transaction(async (manager) => {
         const sourceRepository = manager.getRepository(DeclarationsService.ITEM_ENTITIES[from]);
+        // UnclassifiedItem no tiene relación subtype: pedirla hace fallar
+        // el findOne y todo move desde sin catalogar responde 400.
         const source = await sourceRepository.findOne({
           where: { id: itemId },
           relations: {
             declaration: true,
-            subtype: true,
+            ...(from === 'unclassified' ? {} : { subtype: true }),
             ...(from === 'custom' ? { conceptType: true } : {}),
           },
         });
@@ -290,11 +307,26 @@ export class DeclarationsService {
         const subtypeCleared = !!source.subtype && !subtype && !subtypeId;
 
         const destinationRepository = manager.getRepository(DeclarationsService.ITEM_ENTITIES[to]);
+        // Origen any por diseño: se estrecha a unknown para el plegado.
+        const unclassifiedSource: {
+          sourceDetail?: unknown;
+          reporterName?: unknown;
+          reporterNit?: unknown;
+        } = from === 'unclassified' ? source : {};
         const destination = destinationRepository.create({
           concept: source.concept,
           amount: source.amount,
           source: source.source,
-          sourceDetail: source.sourceDetail ?? undefined,
+          // Al catalogar un sin clasificar, su reportante DIAN se pliega
+          // a source_detail: el destino no tiene columnas reporter.
+          sourceDetail:
+            from === 'unclassified'
+              ? DeclarationsService.foldReporterIntoSourceDetail(
+                  unclassifiedSource.sourceDetail,
+                  unclassifiedSource.reporterName,
+                  unclassifiedSource.reporterNit,
+                )
+              : (source.sourceDetail ?? undefined),
           subtype: subtype ?? undefined,
           declaration: { id: declarationId } as Declaration,
           ...(to === 'custom' ? { conceptType: { id: conceptType!.id } as ConceptType } : {}),
