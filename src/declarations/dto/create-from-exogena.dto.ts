@@ -42,6 +42,13 @@ export class ExogenaItemDto {
     reporterNit?: string;
 }
 
+export class ExogenaCustomItemDto extends ExogenaItemDto {
+
+    @IsUUID()
+    @IsNotEmpty()
+    conceptTypeId: string;
+}
+
 export class CreateFromExogenaDto {
 
     @IsUUID()
@@ -81,4 +88,12 @@ export class CreateFromExogenaDto {
     @ValidateNested({ each: true })
     @Type(() => ExogenaItemDto)
     unclassified?: ExogenaItemDto[];
+
+    // Conceptos exógenos clasificados directo a tipos personalizados
+    // (ej. Retefuente). Se persisten en custom_items en la misma transacción.
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ExogenaCustomItemDto)
+    custom?: ExogenaCustomItemDto[];
 }

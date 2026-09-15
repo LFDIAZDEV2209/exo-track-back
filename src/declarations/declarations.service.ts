@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CreateDeclarationDto } from './dto/create-declaration.dto';
 import { UpdateDeclarationDto } from './dto/update-declaration.dto';
-import { CreateFromExogenaDto, ExogenaItemDto } from './dto/create-from-exogena.dto';
+import { CreateFromExogenaDto, ExogenaCustomItemDto, ExogenaItemDto } from './dto/create-from-exogena.dto';
 import { MoveItemDto, MoveableFromKind, MoveableToKind } from './dto/move-item.dto';
 import { Declaration } from './entities/declaration.entity';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
@@ -60,14 +60,15 @@ export class DeclarationsService {
   };
 
   /**
-   * Crea una declaración junto con sus patrimonios, ingresos, deudas y
-   * conceptos no catalogados en una sola transacción (origen EXOGENA).
-   * Usa inserts por lotes por cada tipo de ítem para minimizar los
-   * round-trips a la base de datos. Nada se descarta: lo no clasificado
-   * se persiste en unclassified_items.
+   * Crea una declaración junto con sus patrimonios, ingresos, deudas,
+   * ítems personalizados y conceptos no catalogados en una sola
+   * transacción (origen EXOGENA). Usa inserts por lotes por cada tipo
+   * de ítem para minimizar los round-trips a la base de datos.
+   * Nada se descarta: lo no clasificado se persiste en
+   * unclassified_items y lo custom va directo a custom_items.
    */
   async createFromExogena(createFromExogenaDto: CreateFromExogenaDto) {
-    const { userId, taxableYear, description, assets = [], incomes = [], liabilities = [], unclassified = [] } = createFromExogenaDto;
+    const { userId, taxableYear, description, assets = [], incomes = [], liabilities = [], unclassified = [], custom = [] } = createFromExogenaDto;
 
     try {
       const result = await this.dataSource.transaction(async (manager) => {
@@ -98,6 +99,45 @@ export class DeclarationsService {
           resolveSubtypes(liabilities, ItemScope.LIABILITY),
         ]);
 
+        // Tipos custom referenciados: deben existir y estar activos.
+        // Referencia inválida => 400 y rollback total (fail fast).
+        const customTypeIds = [...new Set(custom.map((item) => item.conceptTypeId))];
+        const customTypes = new Map<string, ConceptType>();
+        for (const typeId of customTypeIds) {
+          const found = await manager.findOneBy(ConceptType, { id: typeId });
+          if (!found) {
+            throw new NotFoundException('Concept type not found');
+          }
+          if (!found.isActive) {
+            throw new BadRequestException('Cannot import items to an inactive concept type');
+          }
+          customTypes.set(typeId, found);
+        }
+
+        // Subtipos custom por par (subtypeId + conceptTypeId): el subtipo
+        // debe pertenecer al mismo tipo destino. Clave compuesta para no
+        // mezclar el mismo subtipo entre tipos distintos.
+        const customSubtypeKeys = [
+          ...new Set(
+            custom
+              .filter((item): item is ExogenaCustomItemDto & { subtypeId: string } => !!item.subtypeId)
+              .map((item) => `${item.subtypeId}|${item.conceptTypeId}`),
+          ),
+        ];
+        const customSubtypes = new Map<string, ConceptSubtype>();
+        for (const key of customSubtypeKeys) {
+          const [subtypeId, conceptTypeId] = key.split('|');
+          customSubtypes.set(
+            key,
+            await this.conceptSubtypesService.resolveForItem(
+              manager,
+              subtypeId,
+              ItemScope.CUSTOM,
+              conceptTypeId,
+            ),
+          );
+        }
+
         const mapItems = (items: ExogenaItemDto[], subtypes: Map<string, ConceptSubtype>) =>
           items.map((item) => ({
             concept: item.concept,
@@ -119,11 +159,46 @@ export class DeclarationsService {
             declaration: { id: savedDeclaration.id } as Declaration,
           }));
 
-        const [assetsResult, incomesResult, liabilitiesResult, unclassifiedResult] = await Promise.all([
+        // CustomItem no tiene columnas de reportante: se pliega a
+        // sourceDetail para no perder información de la DIAN.
+        const foldCustomSourceDetail = (item: ExogenaCustomItemDto): string | undefined => {
+          const base = item.sourceDetail?.trim() || '';
+          const reporterName = item.reporterName?.trim() || '';
+          const reporterNit = item.reporterNit?.trim() || '';
+          let label = '';
+          if (reporterName && reporterNit) {
+            label = `${reporterName} (NIT ${reporterNit})`;
+          } else if (reporterName) {
+            label = reporterName;
+          } else if (reporterNit) {
+            label = `NIT ${reporterNit}`;
+          }
+          if (label && (base.includes(reporterName || '~~~') || (reporterNit && base.includes(reporterNit)))) {
+            return base || undefined;
+          }
+          const parts = [label, base].filter((part) => part && part.length > 0);
+          return parts.length > 0 ? parts.join(' | ') : undefined;
+        };
+
+        const mapCustom = (items: ExogenaCustomItemDto[]) =>
+          items.map((item) => ({
+            concept: item.concept,
+            amount: item.amount,
+            source: Source.EXOGENA,
+            sourceDetail: foldCustomSourceDetail(item),
+            subtype: item.subtypeId
+              ? customSubtypes.get(`${item.subtypeId}|${item.conceptTypeId}`)
+              : undefined,
+            declaration: { id: savedDeclaration.id } as Declaration,
+            conceptType: { id: item.conceptTypeId } as ConceptType,
+          }));
+
+        const [assetsResult, incomesResult, liabilitiesResult, unclassifiedResult, customResult] = await Promise.all([
           assets.length > 0 ? manager.insert(Asset, mapItems(assets, assetSubtypes)) : null,
           incomes.length > 0 ? manager.insert(Income, mapItems(incomes, incomeSubtypes)) : null,
           liabilities.length > 0 ? manager.insert(Liability, mapItems(liabilities, liabilitySubtypes)) : null,
           unclassified.length > 0 ? manager.insert(UnclassifiedItem, mapUnclassified(unclassified)) : null,
+          custom.length > 0 ? manager.insert(CustomItem, mapCustom(custom)) : null,
         ]);
 
         return {
@@ -133,6 +208,7 @@ export class DeclarationsService {
             incomes: incomesResult?.identifiers.length ?? 0,
             liabilities: liabilitiesResult?.identifiers.length ?? 0,
             unclassified: unclassifiedResult?.identifiers.length ?? 0,
+            custom: customResult?.identifiers.length ?? 0,
           },
         };
       });
